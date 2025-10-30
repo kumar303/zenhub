@@ -1,6 +1,7 @@
 import { useState, useEffect } from "preact/hooks";
 import { Login } from "./components/Login";
 import { NotificationGroup } from "./components/NotificationGroup";
+import { CollapsibleSection } from "./components/CollapsibleSection";
 import { useNotifications } from "./hooks/useNotifications";
 import { useClickedNotifications } from "./hooks/useClickedNotifications";
 import { STORAGE_KEYS } from "./config";
@@ -18,6 +19,9 @@ export function App() {
     error,
     fetchNotifications,
     dismissNotification,
+    loadMore,
+    hasMore,
+    loadingMore,
   } = useNotifications(token);
 
   const { markAsClicked, isClicked } = useClickedNotifications();
@@ -64,12 +68,29 @@ export function App() {
     return <Login onLogin={handleLogin} />;
   }
 
-  const ownContent = notifications.filter((g) => g.isOwnContent);
-  const prominent = notifications.filter(
-    (g) => g.isProminentForMe && !g.isOwnContent
+  // Categorize notifications
+  const reviewRequests = notifications.filter((g) => g.hasReviewRequest);
+  const mentionsAndReplies = notifications.filter(
+    (g) => (g.hasMention || g.hasTeamMention) && !g.hasReviewRequest
+  );
+  const ownContent = notifications.filter(
+    (g) => g.isOwnContent && !g.hasReviewRequest && !g.hasMention
+  );
+  const needsAttention = notifications.filter(
+    (g) =>
+      g.isProminentForMe &&
+      !g.isOwnContent &&
+      !g.hasReviewRequest &&
+      !g.hasMention &&
+      !g.hasTeamMention
   );
   const others = notifications.filter(
-    (g) => !g.isProminentForMe && !g.isOwnContent
+    (g) =>
+      !g.isProminentForMe &&
+      !g.isOwnContent &&
+      !g.hasReviewRequest &&
+      !g.hasMention &&
+      !g.hasTeamMention
   );
 
   return (
@@ -91,7 +112,7 @@ export function App() {
               </span>
             )}
             <button
-              onClick={fetchNotifications}
+              onClick={() => fetchNotifications()}
               disabled={loading}
               className="gradient-blue-yellow text-white font-medium py-2 px-4 rounded-xl hover:shadow-lg transition-all duration-200 disabled:opacity-50"
             >
@@ -135,70 +156,138 @@ export function App() {
         </div>
       )}
 
+      {/* Review Requests - Top Priority */}
+      {reviewRequests.length > 0 && (
+        <CollapsibleSection
+          title="Review Requests"
+          count={reviewRequests.length}
+          gradientClass="gradient-green-red gradient-text"
+          defaultOpen={true}
+        >
+          {reviewRequests.map((group) => (
+            <NotificationGroup
+              key={group.id}
+              group={group}
+              onDismiss={() => dismissNotification(group.id)}
+              getSubjectUrl={getSubjectUrl}
+              onLinkClick={() => markAsClicked(group.id)}
+              isClicked={isClicked(group.id)}
+            />
+          ))}
+        </CollapsibleSection>
+      )}
+
+      {/* Mentions and Replies */}
+      {mentionsAndReplies.length > 0 && (
+        <CollapsibleSection
+          title="Mentions & Replies"
+          count={mentionsAndReplies.length}
+          gradientClass="gradient-blue-yellow gradient-text"
+          defaultOpen={true}
+        >
+          {mentionsAndReplies.map((group) => (
+            <NotificationGroup
+              key={group.id}
+              group={group}
+              onDismiss={() => dismissNotification(group.id)}
+              getSubjectUrl={getSubjectUrl}
+              onLinkClick={() => markAsClicked(group.id)}
+              isClicked={isClicked(group.id)}
+            />
+          ))}
+        </CollapsibleSection>
+      )}
+
+      {/* Your Activity */}
       {ownContent.length > 0 && (
-        <section className="mb-8 animate-fade-in">
-          <h2 className="text-2xl font-bold mb-4 gradient-purple-blue gradient-text">
-            Your Activity
-          </h2>
-          <div className="space-y-4">
-            {ownContent.map((group) => (
-              <NotificationGroup
-                key={group.id}
-                group={group}
-                onDismiss={() => dismissNotification(group.id)}
-                getSubjectUrl={getSubjectUrl}
-                onLinkClick={() => markAsClicked(group.id)}
-                isClicked={isClicked(group.id)}
-              />
-            ))}
-          </div>
-        </section>
+        <CollapsibleSection
+          title="Your Activity"
+          count={ownContent.length}
+          gradientClass="gradient-purple-blue gradient-text"
+          defaultOpen={false}
+        >
+          {ownContent.map((group) => (
+            <NotificationGroup
+              key={group.id}
+              group={group}
+              onDismiss={() => dismissNotification(group.id)}
+              getSubjectUrl={getSubjectUrl}
+              onLinkClick={() => markAsClicked(group.id)}
+              isClicked={isClicked(group.id)}
+            />
+          ))}
+        </CollapsibleSection>
       )}
 
-      {prominent.length > 0 && (
-        <section className="mb-8 animate-fade-in">
-          <h2 className="text-2xl font-bold mb-4 gradient-green-red gradient-text">
-            Needs Your Attention
-          </h2>
-          <div className="space-y-4">
-            {prominent.map((group) => (
-              <NotificationGroup
-                key={group.id}
-                group={group}
-                onDismiss={() => dismissNotification(group.id)}
-                getSubjectUrl={getSubjectUrl}
-                onLinkClick={() => markAsClicked(group.id)}
-                isClicked={isClicked(group.id)}
-              />
-            ))}
-          </div>
-        </section>
+      {/* Needs Your Attention */}
+      {needsAttention.length > 0 && (
+        <CollapsibleSection
+          title="Needs Your Attention"
+          count={needsAttention.length}
+          gradientClass="gradient-olympic gradient-text"
+          defaultOpen={true}
+        >
+          {needsAttention.map((group) => (
+            <NotificationGroup
+              key={group.id}
+              group={group}
+              onDismiss={() => dismissNotification(group.id)}
+              getSubjectUrl={getSubjectUrl}
+              onLinkClick={() => markAsClicked(group.id)}
+              isClicked={isClicked(group.id)}
+            />
+          ))}
+        </CollapsibleSection>
       )}
 
+      {/* Other Notifications */}
       {others.length > 0 && (
-        <section className="mb-8 animate-fade-in">
-          <h2 className="text-2xl font-bold mb-4 text-gray-700">
-            Other Notifications
-          </h2>
-          <div className="space-y-4">
-            {others.map((group) => (
-              <NotificationGroup
-                key={group.id}
-                group={group}
-                onDismiss={() => dismissNotification(group.id)}
-                getSubjectUrl={getSubjectUrl}
-                onLinkClick={() => markAsClicked(group.id)}
-                isClicked={isClicked(group.id)}
-              />
-            ))}
-          </div>
-        </section>
+        <CollapsibleSection
+          title="Other Notifications"
+          count={others.length}
+          gradientClass="text-gray-700"
+          defaultOpen={false}
+        >
+          {others.map((group) => (
+            <NotificationGroup
+              key={group.id}
+              group={group}
+              onDismiss={() => dismissNotification(group.id)}
+              getSubjectUrl={getSubjectUrl}
+              onLinkClick={() => markAsClicked(group.id)}
+              isClicked={isClicked(group.id)}
+            />
+          ))}
+        </CollapsibleSection>
       )}
 
-      {/* Notification limit indicator */}
-      {notifications.length >= 30 && (
-        <div className="mt-8 mb-4 text-center text-sm text-gray-500 animate-fade-in">
-          <p>Showing your most recent notifications (limited to 50)</p>
+      {/* Load More Button */}
+      {hasMore && (
+        <div className="mt-8 mb-4 text-center animate-fade-in">
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="gradient-blue-yellow text-white font-medium py-3 px-6 rounded-xl hover:shadow-lg transition-all duration-200 disabled:opacity-50"
+          >
+            {loadingMore ? (
+              <span className="flex items-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Loading more...
+              </span>
+            ) : (
+              "Load More Notifications"
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Notification count */}
+      {notifications.length > 0 && (
+        <div className="mt-4 mb-4 text-center text-sm text-gray-500 animate-fade-in">
+          <p>
+            Showing {notifications.length} notification
+            {notifications.length !== 1 ? "s" : ""}
+          </p>
         </div>
       )}
     </div>

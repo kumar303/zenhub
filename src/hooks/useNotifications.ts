@@ -22,6 +22,9 @@ export function useNotifications(token: string | null) {
     const saved = localStorage.getItem(STORAGE_KEYS.DISMISSED);
     return saved ? JSON.parse(saved) : [];
   });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const api = token ? new GitHubAPI(token) : null;
 
@@ -195,86 +198,112 @@ export function useNotifications(token: string | null) {
     [api, user]
   );
 
-  const fetchNotifications = useCallback(async () => {
-    if (!api) return;
+  const fetchNotifications = useCallback(
+    async (page: number = 1, append: boolean = false) => {
+      if (!api) return;
 
-    // Don't show loading spinner on subsequent fetches unless it's the initial load
-    if (initialLoad) {
-      setLoading(true);
-    }
+      // Don't show loading spinner on subsequent fetches unless it's the initial load
+      if (initialLoad && page === 1) {
+        setLoading(true);
+      } else if (append) {
+        setLoadingMore(true);
+      }
 
-    // Clear error on retry
-    if (error) {
-      setError(null);
-    }
+      // Clear error on retry
+      if (error) {
+        setError(null);
+      }
 
-    try {
-      // Fetch up to 50 notifications (1 page)
-      const allNotifications = await api.getNotifications(1, 50);
+      try {
+        // Fetch notifications for the specified page
+        const pageNotifications = await api.getNotifications(page, 50);
 
-      // Already limited to 50 by the API
-      const limitedNotifications = allNotifications;
+        // Check if there are more pages
+        setHasMore(pageNotifications.length === 50);
 
-      // Define allowed notification reasons
-      // NOTE: GitHub API doesn't support filtering by reason at the API level,
-      // so we must filter client-side. The API only supports:
-      // - all (true/false) - include read notifications
-      // - participating (true/false) - only direct participation
-      // - since (timestamp) - notifications since date
-      // - before (timestamp) - notifications before date
-      const allowedReasons: Set<string> = new Set([
-        "comment", // New comments (may or may not be replies to you)
-        "mention", // Mentions (may be from old mentions in the thread)
-        "review_requested", // Review requests
-        "ci_activity", // CI activity
-        "subscribed", // Subscribed
-        "assign", // Assignments
-        "team_mention", // Team mentions
-      ]);
+        // Update current page
+        setCurrentPage(page);
 
-      // Filter notifications: only allowed reasons and not dismissed
-      // We're already using participating=true at API level to reduce initial results
-      const filtered = limitedNotifications.filter(
-        (n) =>
-          !dismissed.includes(n.id) &&
-          (allowedReasons.has(n.reason) || n.subject.type === "CheckSuite") && // Include CheckSuite notifications
-          // Exclude comment notifications on threads you authored (likely your own comments)
-          !(
-            n.reason === "comment" &&
-            limitedNotifications.some(
-              (other) =>
-                other.subject.url === n.subject.url && other.reason === "author"
+        const allNotifications =
+          append && page > 1
+            ? [
+                ...notifications.flatMap((g) => g.notifications),
+                ...pageNotifications,
+              ]
+            : pageNotifications;
+
+        // Define allowed notification reasons
+        // NOTE: GitHub API doesn't support filtering by reason at the API level,
+        // so we must filter client-side. The API only supports:
+        // - all (true/false) - include read notifications
+        // - participating (true/false) - only direct participation
+        // - since (timestamp) - notifications since date
+        // - before (timestamp) - notifications before date
+        const allowedReasons: Set<string> = new Set([
+          "comment", // New comments (may or may not be replies to you)
+          "mention", // Mentions (may be from old mentions in the thread)
+          "review_requested", // Review requests
+          "ci_activity", // CI activity
+          "subscribed", // Subscribed
+          "assign", // Assignments
+          "team_mention", // Team mentions
+        ]);
+
+        // Filter notifications: only allowed reasons and not dismissed
+        // We're already using participating=true at API level to reduce initial results
+        const filtered = allNotifications.filter(
+          (n) =>
+            !dismissed.includes(n.id) &&
+            (allowedReasons.has(n.reason) || n.subject.type === "CheckSuite") && // Include CheckSuite notifications
+            // Exclude comment notifications on threads you authored (likely your own comments)
+            !(
+              n.reason === "comment" &&
+              allNotifications.some(
+                (other) =>
+                  other.subject.url === n.subject.url &&
+                  other.reason === "author"
+              )
             )
-          )
-      );
+        );
 
-      // Process and group notifications
-      const processed = await processNotifications(filtered);
-      setNotifications(processed);
+        // Process and group notifications
+        const processed = await processNotifications(filtered);
 
-      // Check for new prominent notifications
-      checkForNewProminentNotifications(processed);
+        if (append && page > 1) {
+          // Merge with existing notifications, avoiding duplicates
+          const existingIds = new Set(notifications.map((g) => g.id));
+          const newGroups = processed.filter((g) => !existingIds.has(g.id));
+          setNotifications([...notifications, ...newGroups]);
+        } else {
+          setNotifications(processed);
+        }
 
-      // Mark initial load as complete
-      if (initialLoad) {
-        setInitialLoad(false);
+        // Check for new prominent notifications
+        checkForNewProminentNotifications(processed);
+
+        // Mark initial load as complete
+        if (initialLoad) {
+          setInitialLoad(false);
+        }
+      } catch (err: any) {
+        if (err.message === "UNAUTHORIZED") {
+          setError("Authentication expired. Please login again.");
+          // Don't reload immediately, let user see the error
+          setTimeout(() => {
+            localStorage.removeItem(STORAGE_KEYS.TOKEN);
+            localStorage.removeItem(STORAGE_KEYS.USER);
+            window.location.reload();
+          }, 2000);
+        } else {
+          setError(err.message || "Failed to fetch notifications");
+        }
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
       }
-    } catch (err: any) {
-      if (err.message === "UNAUTHORIZED") {
-        setError("Authentication expired. Please login again.");
-        // Don't reload immediately, let user see the error
-        setTimeout(() => {
-          localStorage.removeItem(STORAGE_KEYS.TOKEN);
-          localStorage.removeItem(STORAGE_KEYS.USER);
-          window.location.reload();
-        }, 2000);
-      } else {
-        setError(err.message || "Failed to fetch notifications");
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [api, dismissed, processNotifications, initialLoad, error]);
+    },
+    [api, dismissed, processNotifications, initialLoad, error, notifications]
+  );
 
   const checkForNewProminentNotifications = useCallback(
     (groups: NotificationGroup[]) => {
@@ -382,6 +411,13 @@ export function useNotifications(token: string | null) {
     }
   }, []);
 
+  const loadMore = useCallback(async () => {
+    if (!loadingMore && hasMore && currentPage < 10) {
+      // Limit to 10 pages max (500 notifications)
+      await fetchNotifications(currentPage + 1, true);
+    }
+  }, [currentPage, hasMore, loadingMore, fetchNotifications]);
+
   return {
     notifications,
     user,
@@ -389,5 +425,8 @@ export function useNotifications(token: string | null) {
     error,
     fetchNotifications,
     dismissNotification,
+    loadMore,
+    hasMore,
+    loadingMore,
   };
 }
