@@ -21,7 +21,13 @@ export interface GitHubSubject {
   title: string;
   url: string;
   latest_comment_url?: string;
-  type: "Issue" | "PullRequest" | "Release" | "Discussion" | "Commit";
+  type:
+    | "Issue"
+    | "PullRequest"
+    | "Release"
+    | "Discussion"
+    | "Commit"
+    | "CheckSuite";
 }
 
 export interface GitHubNotification {

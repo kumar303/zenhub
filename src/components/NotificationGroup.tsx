@@ -20,6 +20,7 @@ function formatReason(reason: string): string {
     state_change: "State changed",
     subscribed: "Subscribed",
     team_mention: "Team mentioned",
+    ci_activity: "CI activity",
   };
   return reasonMap[reason] || reason.replace(/_/g, " ");
 }

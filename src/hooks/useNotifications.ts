@@ -164,9 +164,22 @@ export function useNotifications(token: string | null) {
       // Limit to 200 most recent notifications
       const limitedNotifications = allNotifications.slice(0, 200);
 
-      // Filter out dismissed notifications
+      // Define allowed notification reasons
+      const allowedReasons: Set<string> = new Set([
+        "comment", // New comments
+        "mention", // Mentions
+        "review_requested", // Review requests
+        "ci_activity", // CI activity
+        "subscribed", // Subscribed
+        "assign", // Assignments
+        "team_mention", // Team mentions
+      ]);
+
+      // Filter notifications: only allowed reasons and not dismissed
       const filtered = limitedNotifications.filter(
-        (n) => !dismissed.includes(n.id)
+        (n) =>
+          !dismissed.includes(n.id) &&
+          (allowedReasons.has(n.reason) || n.subject.type === "CheckSuite") // Include CheckSuite notifications
       );
 
       // Process and group notifications
