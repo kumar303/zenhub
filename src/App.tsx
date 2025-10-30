@@ -70,7 +70,7 @@ export function App() {
   );
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
+    <div className="container mx-auto px-4 py-8 max-w-6xl min-h-screen">
       <header className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-4xl font-bold gradient-olympic gradient-text">
@@ -104,21 +104,36 @@ export function App() {
         </div>
 
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl mb-4">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl mb-4 animate-fade-in">
             {error}
           </div>
         )}
       </header>
 
-      {notifications.length === 0 && !loading && (
-        <div className="text-center py-16 bg-white rounded-3xl shadow-lg gradient-subtle">
+      {/* Loading state */}
+      {loading && notifications.length === 0 && (
+        <div className="text-center py-16">
+          <div className="inline-block">
+            <div className="flex items-center gap-3">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-olympic-blue"></div>
+              <span className="text-lg text-gray-600">
+                Loading notifications...
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {notifications.length === 0 && !loading && !error && (
+        <div className="text-center py-16 bg-white rounded-3xl shadow-lg gradient-subtle animate-fade-in">
           <p className="text-2xl text-gray-600">No notifications! 🎉</p>
           <p className="text-gray-500 mt-2">You're all caught up!</p>
         </div>
       )}
 
       {ownContent.length > 0 && (
-        <section className="mb-8">
+        <section className="mb-8 animate-fade-in">
           <h2 className="text-2xl font-bold mb-4 gradient-purple-blue gradient-text">
             Your Activity
           </h2>
@@ -136,7 +151,7 @@ export function App() {
       )}
 
       {prominent.length > 0 && (
-        <section className="mb-8">
+        <section className="mb-8 animate-fade-in">
           <h2 className="text-2xl font-bold mb-4 gradient-green-red gradient-text">
             Needs Your Attention
           </h2>
@@ -154,7 +169,7 @@ export function App() {
       )}
 
       {others.length > 0 && (
-        <section className="mb-8">
+        <section className="mb-8 animate-fade-in">
           <h2 className="text-2xl font-bold mb-4 text-gray-700">
             Other Notifications
           </h2>

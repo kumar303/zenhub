@@ -9,8 +9,13 @@ import type {
 
 export function useNotifications(token: string | null) {
   const [notifications, setNotifications] = useState<NotificationGroup[]>([]);
-  const [user, setUser] = useState<GitHubUser | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<GitHubUser | null>(() => {
+    // Try to load user from localStorage first
+    const saved = localStorage.getItem(STORAGE_KEYS.USER);
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [loading, setLoading] = useState(true); // Start with loading true
+  const [initialLoad, setInitialLoad] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState<string[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.DISMISSED);
@@ -26,8 +31,18 @@ export function useNotifications(token: string | null) {
       const userData = await api.getUser();
       setUser(userData);
       localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to fetch user:", err);
+      // If user fetch fails due to auth, don't crash the app
+      if (err.message === "UNAUTHORIZED") {
+        setError("Authentication expired. Please login again.");
+        // Don't reload immediately, let user see the error
+        setTimeout(() => {
+          localStorage.removeItem(STORAGE_KEYS.TOKEN);
+          localStorage.removeItem(STORAGE_KEYS.USER);
+          window.location.reload();
+        }, 2000);
+      }
     }
   }, [api]);
 
@@ -62,12 +77,8 @@ export function useNotifications(token: string | null) {
           notification.subject.type === "PullRequest" ||
           notification.subject.type === "Issue"
         ) {
-          // Fetch more details to determine ownership
-          const details = await api.getSubjectDetails(notification.subject.url);
-          if (details && details.user.login === user.login) {
-            groups[key].isOwnContent = true;
-            groups[key].isProminentForMe = true;
-          }
+          // Use notification reason to determine prominence first
+          // This avoids unnecessary API calls
 
           // Check for review requests
           if (notification.reason === "review_requested") {
@@ -81,6 +92,16 @@ export function useNotifications(token: string | null) {
             notification.reason === "comment"
           ) {
             groups[key].hasMention = true;
+            groups[key].isProminentForMe = true;
+          }
+
+          // Check if user is the author (only if not already prominent)
+          // This reduces API calls significantly
+          if (
+            !groups[key].isProminentForMe &&
+            notification.reason === "author"
+          ) {
+            groups[key].isOwnContent = true;
             groups[key].isProminentForMe = true;
           }
         }
@@ -109,8 +130,15 @@ export function useNotifications(token: string | null) {
   const fetchNotifications = useCallback(async () => {
     if (!api) return;
 
-    setLoading(true);
-    setError(null);
+    // Don't show loading spinner on subsequent fetches unless it's the initial load
+    if (initialLoad) {
+      setLoading(true);
+    }
+
+    // Clear error on retry
+    if (error) {
+      setError(null);
+    }
 
     try {
       const data = await api.getNotifications();
@@ -124,19 +152,27 @@ export function useNotifications(token: string | null) {
 
       // Check for new prominent notifications
       checkForNewProminentNotifications(processed);
+
+      // Mark initial load as complete
+      if (initialLoad) {
+        setInitialLoad(false);
+      }
     } catch (err: any) {
       if (err.message === "UNAUTHORIZED") {
         setError("Authentication expired. Please login again.");
-        // Clear invalid token
-        localStorage.removeItem(STORAGE_KEYS.TOKEN);
-        window.location.reload();
+        // Don't reload immediately, let user see the error
+        setTimeout(() => {
+          localStorage.removeItem(STORAGE_KEYS.TOKEN);
+          localStorage.removeItem(STORAGE_KEYS.USER);
+          window.location.reload();
+        }, 2000);
       } else {
         setError(err.message || "Failed to fetch notifications");
       }
     } finally {
       setLoading(false);
     }
-  }, [api, dismissed, processNotifications]);
+  }, [api, dismissed, processNotifications, initialLoad, error]);
 
   const checkForNewProminentNotifications = useCallback(
     (groups: NotificationGroup[]) => {
@@ -201,14 +237,20 @@ export function useNotifications(token: string | null) {
   // Initial setup
   useEffect(() => {
     if (token) {
-      fetchUser();
-      fetchNotifications();
+      // Fetch user and notifications in parallel
+      Promise.all([
+        user ? Promise.resolve() : fetchUser(),
+        fetchNotifications(),
+      ]);
 
       // Set up polling for new notifications
       const interval = setInterval(fetchNotifications, 60000); // Every minute
       return () => clearInterval(interval);
+    } else {
+      // No token, not loading
+      setLoading(false);
     }
-  }, [token, fetchUser, fetchNotifications]);
+  }, [token, fetchUser, fetchNotifications, user]);
 
   // Request notification permissions
   useEffect(() => {
