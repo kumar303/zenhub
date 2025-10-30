@@ -99,14 +99,11 @@ export function useNotifications(token: string | null) {
             groups[key].isProminentForMe = true;
           }
 
-          // Check if user is the author (only if not already prominent)
-          // This reduces API calls significantly
-          if (
-            !groups[key].isProminentForMe &&
-            notification.reason === "author"
-          ) {
+          // Check if user is the author
+          if (notification.reason === "author") {
             groups[key].isOwnContent = true;
-            groups[key].isProminentForMe = true;
+            // Don't mark as prominent if it's just because we authored it
+            // This helps filter out our own activity
           }
         }
       }
@@ -190,7 +187,15 @@ export function useNotifications(token: string | null) {
       const filtered = limitedNotifications.filter(
         (n) =>
           !dismissed.includes(n.id) &&
-          (allowedReasons.has(n.reason) || n.subject.type === "CheckSuite") // Include CheckSuite notifications
+          (allowedReasons.has(n.reason) || n.subject.type === "CheckSuite") && // Include CheckSuite notifications
+          // Exclude comment notifications on threads you authored (likely your own comments)
+          !(
+            n.reason === "comment" &&
+            limitedNotifications.some(
+              (other) =>
+                other.subject.url === n.subject.url && other.reason === "author"
+            )
+          )
       );
 
       // Process and group notifications
