@@ -141,10 +141,33 @@ export function useNotifications(token: string | null) {
     }
 
     try {
-      const data = await api.getNotifications();
+      // Fetch up to 200 notifications (4 pages of 50 each)
+      const allNotifications: GitHubNotification[] = [];
+      const maxPages = 4;
+      const perPage = 50;
+
+      for (let page = 1; page <= maxPages; page++) {
+        const pageData = await api.getNotifications(page, perPage);
+        allNotifications.push(...pageData);
+
+        // Stop if we got less than a full page (no more notifications)
+        if (pageData.length < perPage) {
+          break;
+        }
+
+        // Stop if we have enough notifications
+        if (allNotifications.length >= 200) {
+          break;
+        }
+      }
+
+      // Limit to 200 most recent notifications
+      const limitedNotifications = allNotifications.slice(0, 200);
 
       // Filter out dismissed notifications
-      const filtered = data.filter((n) => !dismissed.includes(n.id));
+      const filtered = limitedNotifications.filter(
+        (n) => !dismissed.includes(n.id)
+      );
 
       // Process and group notifications
       const processed = await processNotifications(filtered);

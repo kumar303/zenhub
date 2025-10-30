@@ -35,9 +35,25 @@ export class GitHubAPI {
     return this.request<GitHubUser>(`${GITHUB_CONFIG.API_BASE}/user`);
   }
 
-  async getNotifications(): Promise<GitHubNotification[]> {
+  async getNotifications(
+    page: number = 1,
+    perPage: number = 50,
+    all: boolean = false
+  ): Promise<GitHubNotification[]> {
+    // GitHub API supports pagination with per_page and page parameters
+    // By default, only fetch unread notifications to reduce load
+    const params = new URLSearchParams({
+      per_page: perPage.toString(),
+      page: page.toString(),
+    });
+
+    // Only add 'all' parameter if explicitly requested
+    if (all) {
+      params.append("all", "true");
+    }
+
     return this.request<GitHubNotification[]>(
-      `${GITHUB_CONFIG.API_BASE}/notifications`
+      `${GITHUB_CONFIG.API_BASE}/notifications?${params}`
     );
   }
 

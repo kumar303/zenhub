@@ -185,6 +185,13 @@ export function App() {
           </div>
         </section>
       )}
+
+      {/* Notification limit indicator */}
+      {notifications.length >= 50 && (
+        <div className="mt-8 mb-4 text-center text-sm text-gray-500 animate-fade-in">
+          <p>Showing your most recent notifications (limited to 200)</p>
+        </div>
+      )}
     </div>
   );
 }
