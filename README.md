@@ -43,10 +43,10 @@ Or manually:
 
 ```bash
 npm run build
-quick deploy dist github-notifications
+quick deploy dist zenhub
 ```
 
-The app will be available at: https://github-notifications.quick.shopify.io
+The app will be available at: https://zenhub.quick.shopify.io
 
 ## GitHub Token
 
