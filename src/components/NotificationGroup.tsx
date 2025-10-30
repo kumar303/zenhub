@@ -7,6 +7,23 @@ interface NotificationGroupProps {
   getSubjectUrl: (subject: NotificationGroupType["subject"]) => string;
 }
 
+function formatReason(reason: string): string {
+  const reasonMap: Record<string, string> = {
+    assign: "Assigned to you",
+    author: "You created this",
+    comment: "New comment",
+    invitation: "Invitation",
+    manual: "Subscribed",
+    mention: "You were mentioned",
+    review_requested: "Review requested",
+    security_alert: "Security alert",
+    state_change: "State changed",
+    subscribed: "Subscribed",
+    team_mention: "Team mentioned",
+  };
+  return reasonMap[reason] || reason.replace(/_/g, " ");
+}
+
 export function NotificationGroup({
   group,
   onDismiss,
@@ -38,7 +55,10 @@ export function NotificationGroup({
               </span>
               {group.isOwnContent && (
                 <span className="px-2 py-1 text-xs font-bold rounded-lg gradient-purple-blue text-white">
-                  YOUR {group.subject.type.toUpperCase()}
+                  YOUR{" "}
+                  {group.subject.type === "PullRequest"
+                    ? "PR"
+                    : group.subject.type.toUpperCase()}
                 </span>
               )}
               {group.hasReviewRequest && (
@@ -65,10 +85,19 @@ export function NotificationGroup({
             </h3>
 
             <div className="flex items-center gap-4 text-sm text-gray-600">
-              <span>{group.subject.type}</span>
               <span>
-                {group.notifications.length} notification
-                {group.notifications.length > 1 ? "s" : ""}
+                {group.subject.type === "PullRequest"
+                  ? "PR"
+                  : group.subject.type}
+              </span>
+              <span>
+                {group.notifications.length === 1 ? (
+                  <span className="font-medium">
+                    {formatReason(group.notifications[0].reason)}
+                  </span>
+                ) : (
+                  <span>{group.notifications.length} notifications</span>
+                )}
               </span>
               <span>
                 Updated{" "}
@@ -84,7 +113,7 @@ export function NotificationGroup({
                     className="text-sm text-gray-600 pl-4 border-l-2 border-gray-200"
                   >
                     <span className="font-medium">
-                      {n.reason.replace(/_/g, " ")}
+                      {formatReason(n.reason)}
                     </span>{" "}
                     -{new Date(n.updated_at).toLocaleString()}
                   </div>
