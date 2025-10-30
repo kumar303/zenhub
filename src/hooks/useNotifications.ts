@@ -193,6 +193,12 @@ export function useNotifications(token: string | null) {
       const limitedNotifications = allNotifications.slice(0, 200);
 
       // Define allowed notification reasons
+      // NOTE: GitHub API doesn't support filtering by reason at the API level,
+      // so we must filter client-side. The API only supports:
+      // - all (true/false) - include read notifications
+      // - participating (true/false) - only direct participation
+      // - since (timestamp) - notifications since date
+      // - before (timestamp) - notifications before date
       const allowedReasons: Set<string> = new Set([
         "comment", // New comments
         "mention", // Mentions
@@ -204,6 +210,7 @@ export function useNotifications(token: string | null) {
       ]);
 
       // Filter notifications: only allowed reasons and not dismissed
+      // We're already using participating=true at API level to reduce initial results
       const filtered = limitedNotifications.filter(
         (n) =>
           !dismissed.includes(n.id) &&

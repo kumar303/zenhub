@@ -45,6 +45,7 @@ export class GitHubAPI {
     const params = new URLSearchParams({
       per_page: perPage.toString(),
       page: page.toString(),
+      participating: "true", // Only show notifications where user is directly participating
     });
 
     // Only add 'all' parameter if explicitly requested
