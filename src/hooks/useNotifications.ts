@@ -281,23 +281,44 @@ export function useNotifications(token: string | null) {
     [notifications, dismissed]
   );
 
-  // Initial setup
+  // Initial setup - only run when token changes
   useEffect(() => {
-    if (token) {
-      // Fetch user and notifications in parallel
-      Promise.all([
-        user ? Promise.resolve() : fetchUser(),
-        fetchNotifications(),
-      ]);
-
-      // Set up polling for new notifications
-      const interval = setInterval(fetchNotifications, 60000); // Every minute
-      return () => clearInterval(interval);
-    } else {
-      // No token, not loading
+    if (!token) {
       setLoading(false);
+      return;
     }
-  }, [token, fetchUser, fetchNotifications, user]);
+
+    let mounted = true;
+
+    const initializeData = async () => {
+      if (!mounted) return;
+
+      // Fetch user if not already loaded
+      if (!user) {
+        await fetchUser();
+      }
+
+      // Fetch notifications
+      if (mounted) {
+        await fetchNotifications();
+      }
+    };
+
+    initializeData();
+
+    // Set up polling for new notifications
+    const interval = setInterval(() => {
+      if (mounted) {
+        fetchNotifications();
+      }
+    }, 60000); // Every minute
+
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]); // Only depend on token changes
 
   // Request notification permissions
   useEffect(() => {
