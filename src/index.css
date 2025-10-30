@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom gradients */
+.gradient-olympic {
+  background: linear-gradient(
+    135deg,
+    #0081c8 0%,
+    #fcb131 25%,
+    #00a651 50%,
+    #ee334e 75%,
+    #a020f0 100%
+  );
+}
+
+.gradient-blue-yellow {
+  background: linear-gradient(135deg, #0081c8 0%, #fcb131 100%);
+}
+
+.gradient-green-red {
+  background: linear-gradient(135deg, #00a651 0%, #ee334e 100%);
+}
+
+.gradient-purple-blue {
+  background: linear-gradient(135deg, #a020f0 0%, #0081c8 100%);
+}
+
+.gradient-subtle {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 129, 200, 0.1) 0%,
+    rgba(252, 177, 49, 0.1) 100%
+  );
+}
+
+.gradient-text {
+  @apply bg-clip-text text-transparent;
+}
