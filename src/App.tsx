@@ -2,6 +2,7 @@ import { useState, useEffect } from "preact/hooks";
 import { Login } from "./components/Login";
 import { NotificationGroup } from "./components/NotificationGroup";
 import { useNotifications } from "./hooks/useNotifications";
+import { useClickedNotifications } from "./hooks/useClickedNotifications";
 import { STORAGE_KEYS } from "./config";
 import type { NotificationGroup as NotificationGroupType } from "./types";
 
@@ -18,6 +19,8 @@ export function App() {
     fetchNotifications,
     dismissNotification,
   } = useNotifications(token);
+
+  const { markAsClicked, isClicked } = useClickedNotifications();
 
   // Handle OAuth callback (if implementing full OAuth flow)
   useEffect(() => {
@@ -144,6 +147,8 @@ export function App() {
                 group={group}
                 onDismiss={() => dismissNotification(group.id)}
                 getSubjectUrl={getSubjectUrl}
+                onLinkClick={() => markAsClicked(group.id)}
+                isClicked={isClicked(group.id)}
               />
             ))}
           </div>
@@ -162,6 +167,8 @@ export function App() {
                 group={group}
                 onDismiss={() => dismissNotification(group.id)}
                 getSubjectUrl={getSubjectUrl}
+                onLinkClick={() => markAsClicked(group.id)}
+                isClicked={isClicked(group.id)}
               />
             ))}
           </div>
@@ -180,6 +187,8 @@ export function App() {
                 group={group}
                 onDismiss={() => dismissNotification(group.id)}
                 getSubjectUrl={getSubjectUrl}
+                onLinkClick={() => markAsClicked(group.id)}
+                isClicked={isClicked(group.id)}
               />
             ))}
           </div>

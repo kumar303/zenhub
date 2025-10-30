@@ -6,6 +6,8 @@ interface NotificationGroupProps {
   group: NotificationGroupType;
   onDismiss: () => void;
   getSubjectUrl: (subject: NotificationGroupType["subject"]) => string;
+  onLinkClick: () => void;
+  isClicked: boolean;
 }
 
 function formatReason(reason: string): string {
@@ -30,6 +32,8 @@ export function NotificationGroup({
   group,
   onDismiss,
   getSubjectUrl,
+  onLinkClick,
+  isClicked,
 }: NotificationGroupProps) {
   const [expanded, setExpanded] = useState(false);
 
@@ -44,11 +48,17 @@ export function NotificationGroup({
 
   return (
     <div
-      className={`bg-white rounded-2xl shadow-lg overflow-hidden ${
+      className={`${
+        isClicked ? "opacity-60" : ""
+      } bg-white rounded-2xl shadow-lg overflow-hidden ${
         borderClass ? "p-1" : ""
-      }`}
+      } transition-opacity duration-200`}
     >
-      <div className={`${borderClass ? "bg-white rounded-xl" : ""} p-6`}>
+      <div
+        className={`${borderClass ? "bg-white rounded-xl" : ""} p-6 ${
+          isClicked ? "bg-gray-50" : ""
+        }`}
+      >
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
@@ -73,6 +83,11 @@ export function NotificationGroup({
                   MENTION
                 </span>
               )}
+              {isClicked && (
+                <span className="px-2 py-1 text-xs font-medium rounded-lg bg-gray-200 text-gray-600">
+                  VISITED
+                </span>
+              )}
             </div>
 
             <h3 className="text-lg font-semibold mb-2">
@@ -80,7 +95,10 @@ export function NotificationGroup({
                 href={getSubjectUrl(group.subject)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-olympic-blue hover:text-olympic-purple transition-colors duration-200"
+                onClick={onLinkClick}
+                className={`${
+                  isClicked ? "text-olympic-purple" : "text-olympic-blue"
+                } hover:text-olympic-purple transition-colors duration-200`}
               >
                 {group.subject.title}
               </a>
