@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "preact/hooks";
 import { GitHubAPI } from "../api";
 import { STORAGE_KEYS } from "../config";
+import { stateCache } from "../utils/stateCache";
 import type {
   GitHubUser,
   GitHubNotification,
@@ -53,12 +54,49 @@ export function useNotifications(token: string | null) {
       // Group notifications by repository and subject
       const groups: Record<string, NotificationGroup> = {};
 
+      // Collect URLs that need state checking
+      const urlsToCheck: Set<string> = new Set();
+
+      // First pass: identify which URLs need checking
+      for (const notification of rawNotifications) {
+        if (
+          notification.subject.type === "Issue" ||
+          notification.subject.type === "PullRequest"
+        ) {
+          const cached = stateCache.get(notification.subject.url);
+          if (!cached) {
+            urlsToCheck.add(notification.subject.url);
+          }
+        }
+      }
+
+      // Batch fetch states for URLs not in cache (limit to 10 at a time to avoid rate limits)
+      const urlArray = Array.from(urlsToCheck);
+      for (let i = 0; i < urlArray.length && i < 10; i++) {
+        const url = urlArray[i];
+        try {
+          const details = await api.getSubjectDetails(url);
+          if (details && details.state) {
+            stateCache.set(url, details.state);
+          }
+        } catch (err) {
+          console.error("Failed to fetch state for:", url);
+        }
+      }
+
+      // Second pass: process notifications, filtering out closed/merged
       for (const notification of rawNotifications) {
         const key = `${notification.repository.full_name}#${notification.subject.url}`;
 
-        // Skip checking closed/merged state to avoid excessive API calls
-        // The participating=true filter and reason filtering should already
-        // remove most irrelevant notifications
+        // Check if closed/merged (from cache or fresh fetch)
+        if (
+          notification.subject.type === "Issue" ||
+          notification.subject.type === "PullRequest"
+        ) {
+          if (stateCache.isClosedOrMerged(notification.subject.url)) {
+            continue; // Skip closed/merged items
+          }
+        }
 
         if (!groups[key]) {
           groups[key] = {
