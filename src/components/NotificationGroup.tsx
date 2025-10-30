@@ -1,5 +1,6 @@
 import { useState } from "preact/hooks";
 import type { NotificationGroup as NotificationGroupType } from "../types";
+import { formatDateTime } from "../utils/date";
 
 interface NotificationGroupProps {
   group: NotificationGroupType;
@@ -101,8 +102,7 @@ export function NotificationGroup({
                 )}
               </span>
               <span>
-                Updated{" "}
-                {new Date(group.notifications[0].updated_at).toLocaleString()}
+                Updated {formatDateTime(group.notifications[0].updated_at)}
               </span>
             </div>
 
@@ -116,7 +116,7 @@ export function NotificationGroup({
                     <span className="font-medium">
                       {formatReason(n.reason)}
                     </span>{" "}
-                    -{new Date(n.updated_at).toLocaleString()}
+                    - {formatDateTime(n.updated_at)}
                   </div>
                 ))}
               </div>
