@@ -53,8 +53,36 @@ export function useNotifications(token: string | null) {
       // Group notifications by repository and subject
       const groups: Record<string, NotificationGroup> = {};
 
+      // Keep track of which subjects to exclude
+      const excludedSubjects = new Set<string>();
+
       for (const notification of rawNotifications) {
         const key = `${notification.repository.full_name}#${notification.subject.url}`;
+
+        // Check if this is an Issue or PR that might be closed/merged
+        if (
+          notification.subject.type === "Issue" ||
+          notification.subject.type === "PullRequest"
+        ) {
+          // Only fetch details if we haven't checked this subject yet
+          if (!excludedSubjects.has(key) && !groups[key]) {
+            const details = await api.getSubjectDetails(
+              notification.subject.url
+            );
+            if (
+              details &&
+              (details.state === "closed" || details.state === "merged")
+            ) {
+              excludedSubjects.add(key);
+              continue; // Skip this notification
+            }
+          }
+
+          // Skip if we already know this subject is closed/merged
+          if (excludedSubjects.has(key)) {
+            continue;
+          }
+        }
 
         if (!groups[key]) {
           groups[key] = {
