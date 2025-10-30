@@ -73,12 +73,13 @@ export function useNotifications(token: string | null) {
       // Batch fetch states for URLs not in cache (limit to 20 at a time to avoid rate limits)
       const urlArray = Array.from(urlsToCheck);
       const fetchPromises: Promise<void>[] = [];
-      
+
       // Process in parallel but limit concurrency
       for (let i = 0; i < urlArray.length && i < 20; i++) {
         const url = urlArray[i];
-        const fetchPromise = api.getSubjectDetails(url)
-          .then(details => {
+        const fetchPromise = api
+          .getSubjectDetails(url)
+          .then((details) => {
             if (details && details.state) {
               stateCache.set(url, details.state);
             }
@@ -90,7 +91,7 @@ export function useNotifications(token: string | null) {
           });
         fetchPromises.push(fetchPromise);
       }
-      
+
       // Wait for all fetches to complete
       await Promise.all(fetchPromises);
 
@@ -208,28 +209,11 @@ export function useNotifications(token: string | null) {
     }
 
     try {
-      // Fetch up to 200 notifications (4 pages of 50 each)
-      const allNotifications: GitHubNotification[] = [];
-      const maxPages = 4;
-      const perPage = 50;
+      // Fetch up to 50 notifications (1 page)
+      const allNotifications = await api.getNotifications(1, 50);
 
-      for (let page = 1; page <= maxPages; page++) {
-        const pageData = await api.getNotifications(page, perPage);
-        allNotifications.push(...pageData);
-
-        // Stop if we got less than a full page (no more notifications)
-        if (pageData.length < perPage) {
-          break;
-        }
-
-        // Stop if we have enough notifications
-        if (allNotifications.length >= 200) {
-          break;
-        }
-      }
-
-      // Limit to 200 most recent notifications
-      const limitedNotifications = allNotifications.slice(0, 200);
+      // Already limited to 50 by the API
+      const limitedNotifications = allNotifications;
 
       // Define allowed notification reasons
       // NOTE: GitHub API doesn't support filtering by reason at the API level,
