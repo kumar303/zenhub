@@ -109,6 +109,7 @@ export function useNotifications(token: string | null) {
             hasReviewRequest: false,
             hasMention: false,
             hasReply: false,
+            hasTeamMention: false,
           };
         }
 
@@ -123,18 +124,30 @@ export function useNotifications(token: string | null) {
           // This avoids unnecessary API calls
 
           // Check for review requests
+          // Note: GitHub API doesn't distinguish between personal and team review requests
+          // For now, we'll treat all review requests as prominent
+          // You can manually move team review requests to "Other" by dismissing and re-subscribing
           if (notification.reason === "review_requested") {
             groups[key].hasReviewRequest = true;
             groups[key].isProminentForMe = true;
           }
 
-          // Check for mentions or replies
-          if (
-            notification.reason === "mention" ||
-            notification.reason === "comment"
-          ) {
+          // Check for mentions or replies (but not team mentions)
+          if (notification.reason === "mention") {
             groups[key].hasMention = true;
             groups[key].isProminentForMe = true;
+          }
+
+          // Comments might be replies to you
+          if (notification.reason === "comment") {
+            groups[key].hasMention = true;
+            groups[key].isProminentForMe = true;
+          }
+
+          // Team mentions are lower priority
+          if (notification.reason === "team_mention") {
+            groups[key].hasTeamMention = true;
+            // Don't mark as prominent - let it go to "Other Notifications"
           }
 
           // Check if user is the author

@@ -78,9 +78,14 @@ export function NotificationGroup({
                   REVIEW REQUEST
                 </span>
               )}
-              {group.hasMention && (
+              {group.hasMention && !group.hasTeamMention && (
                 <span className="px-2 py-1 text-xs font-bold rounded-lg gradient-blue-yellow text-white">
                   MENTION
+                </span>
+              )}
+              {group.hasTeamMention && (
+                <span className="px-2 py-1 text-xs font-medium rounded-lg bg-gray-300 text-gray-700">
+                  TEAM MENTION
                 </span>
               )}
               {isClicked && (

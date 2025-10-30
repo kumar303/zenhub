@@ -63,6 +63,7 @@ export interface NotificationGroup {
   hasReviewRequest: boolean;
   hasMention: boolean;
   hasReply: boolean;
+  hasTeamMention: boolean;
 }
 
 export interface SubjectDetails {
