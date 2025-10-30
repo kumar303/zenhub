@@ -17,7 +17,7 @@ function formatReason(reason: string): string {
     comment: "New comment",
     invitation: "Invitation",
     manual: "Subscribed",
-    mention: "You were mentioned",
+    mention: "Mentioned in thread",
     review_requested: "Review requested",
     security_alert: "Security alert",
     state_change: "State changed",
@@ -79,8 +79,11 @@ export function NotificationGroup({
                 </span>
               )}
               {group.hasMention && !group.hasTeamMention && (
-                <span className="px-2 py-1 text-xs font-bold rounded-lg gradient-blue-yellow text-white">
-                  MENTION
+                <span
+                  className="px-2 py-1 text-xs font-bold rounded-lg gradient-blue-yellow text-white"
+                  title="You were mentioned in this thread (may not be the latest comment)"
+                >
+                  MENTIONED
                 </span>
               )}
               {group.hasTeamMention && (

@@ -132,16 +132,21 @@ export function useNotifications(token: string | null) {
             groups[key].isProminentForMe = true;
           }
 
-          // Check for mentions or replies (but not team mentions)
+          // Check for mentions
+          // Note: GitHub sends "mention" even if you were mentioned in an old comment
+          // and someone else comments. Without fetching comment details, we can't
+          // distinguish real new mentions from old mention notifications.
           if (notification.reason === "mention") {
             groups[key].hasMention = true;
+            // For now, treat as prominent but with lower confidence
             groups[key].isProminentForMe = true;
           }
 
-          // Comments might be replies to you
+          // Comments might be replies to you, but often aren't
+          // Only mark as prominent if we have other signals
           if (notification.reason === "comment") {
-            groups[key].hasMention = true;
-            groups[key].isProminentForMe = true;
+            // Don't automatically assume comments are mentions/replies
+            // This reduces false positives
           }
 
           // Team mentions are lower priority
@@ -224,8 +229,8 @@ export function useNotifications(token: string | null) {
       // - since (timestamp) - notifications since date
       // - before (timestamp) - notifications before date
       const allowedReasons: Set<string> = new Set([
-        "comment", // New comments
-        "mention", // Mentions
+        "comment", // New comments (may or may not be replies to you)
+        "mention", // Mentions (may be from old mentions in the thread)
         "review_requested", // Review requests
         "ci_activity", // CI activity
         "subscribed", // Subscribed
