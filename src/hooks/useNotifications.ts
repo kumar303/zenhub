@@ -70,19 +70,29 @@ export function useNotifications(token: string | null) {
         }
       }
 
-      // Batch fetch states for URLs not in cache (limit to 10 at a time to avoid rate limits)
+      // Batch fetch states for URLs not in cache (limit to 20 at a time to avoid rate limits)
       const urlArray = Array.from(urlsToCheck);
-      for (let i = 0; i < urlArray.length && i < 10; i++) {
+      const fetchPromises: Promise<void>[] = [];
+      
+      // Process in parallel but limit concurrency
+      for (let i = 0; i < urlArray.length && i < 20; i++) {
         const url = urlArray[i];
-        try {
-          const details = await api.getSubjectDetails(url);
-          if (details && details.state) {
-            stateCache.set(url, details.state);
-          }
-        } catch (err) {
-          console.error("Failed to fetch state for:", url);
-        }
+        const fetchPromise = api.getSubjectDetails(url)
+          .then(details => {
+            if (details && details.state) {
+              stateCache.set(url, details.state);
+            }
+          })
+          .catch(() => {
+            console.error("Failed to fetch state for:", url);
+            // Cache as "unknown" to avoid repeated failed fetches
+            stateCache.set(url, "unknown");
+          });
+        fetchPromises.push(fetchPromise);
       }
+      
+      // Wait for all fetches to complete
+      await Promise.all(fetchPromises);
 
       // Second pass: process notifications, filtering out closed/merged
       for (const notification of rawNotifications) {

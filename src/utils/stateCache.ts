@@ -1,6 +1,6 @@
 // Cache for issue/PR states to avoid repeated API calls
 const STATE_CACHE_KEY = "github_state_cache";
-const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+const CACHE_DURATION = 6 * 60 * 60 * 1000; // 6 hours - shorter for better accuracy
 
 interface CachedState {
   state: string;
@@ -65,7 +65,18 @@ export class StateCache {
 
   isClosedOrMerged(url: string): boolean {
     const state = this.get(url);
+    // Don't filter out unknown states - better to show them than hide them
+    if (state === "unknown") return false;
     return state === "closed" || state === "merged";
+  }
+
+  clear() {
+    this.cache = {};
+    try {
+      localStorage.removeItem(STATE_CACHE_KEY);
+    } catch (e) {
+      console.error("Failed to clear state cache:", e);
+    }
   }
 }
 
