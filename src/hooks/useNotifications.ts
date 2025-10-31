@@ -244,6 +244,11 @@ export function useNotifications(token: string | null) {
                   );
                 } else {
                   // Couldn't determine specific team, use generic team section
+                  console.log(
+                    `Could not find team for PR: ${
+                      notification.subject.url
+                    }, user teams: ${userTeamSlugs.join(", ")}`
+                  );
                   group.teamSlug = "_team_review_requests";
                   group.teamName = "Team Review Requests";
                   teamCache.set(
@@ -256,6 +261,9 @@ export function useNotifications(token: string | null) {
                 }
               } else {
                 // No teams loaded, use generic section
+                console.log(
+                  `No user teams loaded yet for PR: ${notification.subject.url}`
+                );
                 group.teamSlug = "_team_review_requests";
                 group.teamName = "Team Review Requests";
                 teamCache.set(
@@ -308,7 +316,7 @@ export function useNotifications(token: string | null) {
 
       return groupedArray;
     },
-    [api, user]
+    [api, user, userTeams]
   );
 
   const fetchNotifications = useCallback(
