@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "preact/hooks";
+import { useState, useEffect, useCallback, useMemo } from "preact/hooks";
 import { GitHubAPI } from "../api";
 import { STORAGE_KEYS } from "../config";
 import { stateCache } from "../utils/stateCache";
@@ -32,7 +32,7 @@ export function useNotifications(token: string | null) {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  const [api] = useState(() => (token ? new GitHubAPI(token) : null));
+  const api = useMemo(() => (token ? new GitHubAPI(token) : null), [token]);
 
   const processNotifications = useCallback(
     async (rawNotifications: GitHubNotification[]) => {
@@ -606,7 +606,7 @@ export function useNotifications(token: string | null) {
         clearInterval(refreshInterval);
       }
     };
-  }, [token]); // Only depend on token to avoid infinite loops
+  }, [token, api]); // Depend on token and api
 
   // Request notification permissions
   useEffect(() => {
