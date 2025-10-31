@@ -416,6 +416,14 @@ export function useNotifications(token: string | null) {
         // Mark first session load as complete after first fetch
         if (isFirstSessionLoad) {
           setIsFirstSessionLoad(false);
+          // Mark all current notifications as "seen" in sessionStorage
+          // so they won't trigger web notifications on the first auto-refresh
+          for (const group of processed) {
+            if (group.isProminentForMe) {
+              const key = `notified_${group.id}`;
+              sessionStorage.setItem(key, "true");
+            }
+          }
         }
       } catch (err: any) {
         if (err.message === "UNAUTHORIZED") {
