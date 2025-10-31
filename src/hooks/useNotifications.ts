@@ -32,7 +32,7 @@ export function useNotifications(token: string | null) {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  const api = token ? new GitHubAPI(token) : null;
+  const [api] = useState(() => (token ? new GitHubAPI(token) : null));
 
   const processNotifications = useCallback(
     async (rawNotifications: GitHubNotification[]) => {
@@ -606,7 +606,7 @@ export function useNotifications(token: string | null) {
         clearInterval(refreshInterval);
       }
     };
-  }, [token, api, fetchNotifications]); // Include api and fetchNotifications
+  }, [token]); // Only depend on token to avoid infinite loops
 
   // Request notification permissions
   useEffect(() => {
