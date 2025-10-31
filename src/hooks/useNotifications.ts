@@ -226,6 +226,10 @@ export function useNotifications(token: string | null) {
               if (cached.teamSlug) {
                 group.teamSlug = cached.teamSlug;
                 group.teamName = cached.teamName;
+              } else {
+                // Use generic team section if no specific team is cached
+                group.teamSlug = "_team_review_requests";
+                group.teamName = "Team Review Requests";
               }
             }
           } else {
@@ -235,6 +239,14 @@ export function useNotifications(token: string | null) {
               notification: group.notifications[0],
             });
           }
+        }
+
+        // Also process team mentions - for now just mark them with a generic team section
+        if (group.hasTeamMention) {
+          // Team mentions don't tell us which team, so use a generic section
+          group.teamSlug = "_team_mentions";
+          group.teamName = "Team Mentions";
+          group.isProminentForMe = false;
         }
       }
 
@@ -263,7 +275,15 @@ export function useNotifications(token: string | null) {
                   teamInfo.name
                 );
               } else {
-                teamCache.set(notification.id, true);
+                // Couldn't determine specific team, use generic team section
+                group.teamSlug = "_team_review_requests";
+                group.teamName = "Team Review Requests";
+                teamCache.set(
+                  notification.id,
+                  true,
+                  "_team_review_requests",
+                  "Team Review Requests"
+                );
               }
               // It's a team review, not prominent for the individual
               group.isProminentForMe = false;
@@ -434,15 +454,24 @@ export function useNotifications(token: string | null) {
       const prominentGroups = groups.filter((g) => g.isProminentForMe);
 
       for (const group of prominentGroups) {
-        const latestNotification = group.notifications[0];
-        const key = `notified_${latestNotification.id}`;
+        // Check if ANY notification in the group is new
+        let hasNewNotification = false;
+        if (newNotificationIds) {
+          for (const notification of group.notifications) {
+            if (newNotificationIds.has(notification.id)) {
+              hasNewNotification = true;
+              break;
+            }
+          }
+        } else {
+          // If no newNotificationIds provided (initial load), always true
+          hasNewNotification = true;
+        }
 
-        // If newNotificationIds is provided, only notify for truly new notifications
-        const isNewNotification = newNotificationIds
-          ? newNotificationIds.has(latestNotification.id)
-          : true;
+        // Use the group ID for tracking, not individual notification
+        const key = `notified_${group.id}`;
 
-        if (!sessionStorage.getItem(key) && isNewNotification) {
+        if (!sessionStorage.getItem(key) && hasNewNotification) {
           sessionStorage.setItem(key, "true");
 
           let title = `${group.subject.title}`;

@@ -172,12 +172,13 @@ export function App() {
   );
   const others = notifications.filter(
     (g) =>
-      (!g.isProminentForMe ||
-        (g.hasTeamMention && !g.teamSlug) ||
-        (g.isTeamReviewRequest && !g.teamSlug)) &&
+      !g.isProminentForMe &&
       !g.isOwnContent &&
-      (!g.hasReviewRequest || (g.isTeamReviewRequest && !g.teamSlug)) &&
-      (!g.hasMention || (g.hasTeamMention && !g.teamSlug))
+      !g.hasReviewRequest &&
+      !g.hasMention &&
+      !g.isTeamReviewRequest &&
+      !g.hasTeamMention &&
+      !g.teamSlug // Exclude anything with a team assignment
   );
 
   return (
