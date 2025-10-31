@@ -1,8 +1,8 @@
 // Utility to clear specific cache entries for debugging
+import { CACHE_KEYS } from "../config/cacheKeys";
 
 export function clearTeamCacheEntry(notificationId: string) {
-  const TEAM_CACHE_KEY = "github_team_cache_v3";
-  const cacheData = localStorage.getItem(TEAM_CACHE_KEY);
+  const cacheData = localStorage.getItem(CACHE_KEYS.TEAM_CACHE);
 
   if (!cacheData) return false;
 
@@ -10,7 +10,7 @@ export function clearTeamCacheEntry(notificationId: string) {
     const cache = JSON.parse(cacheData);
     if (cache.data && cache.data[notificationId]) {
       delete cache.data[notificationId];
-      localStorage.setItem(TEAM_CACHE_KEY, JSON.stringify(cache));
+      localStorage.setItem(CACHE_KEYS.TEAM_CACHE, JSON.stringify(cache));
       console.log(
         `Cleared team cache entry for notification: ${notificationId}`
       );
@@ -24,8 +24,8 @@ export function clearTeamCacheEntry(notificationId: string) {
 }
 
 export function clearAllTeamCache() {
-  localStorage.removeItem("github_team_cache_v3");
-  localStorage.removeItem("github_team_cache_v2");
-  localStorage.removeItem("github_team_cache");
+  localStorage.removeItem(CACHE_KEYS.TEAM_CACHE);
+  localStorage.removeItem(CACHE_KEYS.TEAM_CACHE_V2);
+  localStorage.removeItem(CACHE_KEYS.TEAM_CACHE_V1);
   console.log("Cleared all team cache versions");
 }

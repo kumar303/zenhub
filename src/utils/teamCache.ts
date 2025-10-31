@@ -1,8 +1,6 @@
 // Cache for team review requests and mentions to avoid repeated API calls
 import { ItemCache } from "./cache";
-
-const TEAM_CACHE_KEY = "github_team_cache_v3"; // v3 includes orphaned team review logic
-const CACHE_DURATION = 12 * 60 * 60 * 1000; // 12 hours
+import { CACHE_KEYS, CACHE_DURATIONS } from "../config/cacheKeys";
 
 interface TeamInfo {
   isTeamReviewRequest: boolean;
@@ -15,7 +13,7 @@ class TeamCache {
   private cache: ItemCache<TeamInfo>;
 
   constructor() {
-    this.cache = new ItemCache(TEAM_CACHE_KEY, CACHE_DURATION);
+    this.cache = new ItemCache(CACHE_KEYS.TEAM_CACHE, CACHE_DURATIONS.TEAM_CACHE);
   }
 
   get(notificationId: string): TeamInfo | null {
@@ -48,14 +46,14 @@ class TeamCache {
 
   // Clear a specific notification from cache
   clearNotification(notificationId: string) {
-    const cacheData = localStorage.getItem(TEAM_CACHE_KEY);
+    const cacheData = localStorage.getItem(CACHE_KEYS.TEAM_CACHE);
     if (!cacheData) return;
-
+    
     try {
       const cache = JSON.parse(cacheData);
       if (cache.data && cache.data[notificationId]) {
         delete cache.data[notificationId];
-        localStorage.setItem(TEAM_CACHE_KEY, JSON.stringify(cache));
+        localStorage.setItem(CACHE_KEYS.TEAM_CACHE, JSON.stringify(cache));
         console.log(`Cleared cache for notification: ${notificationId}`);
       }
     } catch (error) {

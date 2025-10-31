@@ -1,5 +1,6 @@
 import { useState, useEffect } from "preact/hooks";
 import type { NotificationGroup, GitHubTeam } from "../types";
+import { CACHE_KEYS } from "../config/cacheKeys";
 
 interface DebugModalProps {
   isOpen: boolean;
@@ -53,8 +54,7 @@ export function DebugModal({
         updatedAt: group.notifications[0].updated_at,
         // Additional debug info for orphaned reviews
         cacheStatus: (() => {
-          const cacheKey = `github_team_cache_v3`;
-          const cacheData = localStorage.getItem(cacheKey);
+          const cacheData = localStorage.getItem(CACHE_KEYS.TEAM_CACHE);
           if (!cacheData) return "no cache";
           try {
             const cache = JSON.parse(cacheData);
@@ -69,10 +69,10 @@ export function DebugModal({
         })(),
       })),
       localStorage: {
-        teamCacheKey: localStorage.getItem("github_team_cache_v3")
+        teamCacheKey: localStorage.getItem(CACHE_KEYS.TEAM_CACHE)
           ? "exists"
           : "empty",
-        teamsCacheKey: localStorage.getItem("github_user_teams")
+        teamsCacheKey: localStorage.getItem(CACHE_KEYS.USER_TEAMS)
           ? "exists"
           : "empty",
       },
