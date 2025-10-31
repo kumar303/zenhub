@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "preact/hooks";
 import { GitHubAPI } from "../api";
 import { STORAGE_KEYS } from "../config";
 import { stateCache } from "../utils/stateCache";
+import { teamCache } from "../utils/teamCache";
 import type {
   GitHubUser,
   GitHubNotification,
@@ -124,6 +125,7 @@ export function useNotifications(token: string | null) {
             hasMention: false,
             hasReply: false,
             hasTeamMention: false,
+            isTeamReviewRequest: false,
           };
         }
 
@@ -177,6 +179,60 @@ export function useNotifications(token: string | null) {
           }
         }
       }
+
+      // Third pass: Check for team review requests
+      // Collect notifications that need team review checks
+      const reviewRequestsToCheck: Array<{
+        group: NotificationGroup;
+        notification: GitHubNotification;
+      }> = [];
+
+      for (const group of Object.values(groups)) {
+        if (group.hasReviewRequest && group.subject.type === "PullRequest") {
+          // Check cache first
+          const cached = teamCache.isTeamReview(group.notifications[0].id);
+          if (cached !== null) {
+            group.isTeamReviewRequest = cached;
+            if (cached) {
+              // It's a team review, not prominent for the individual
+              group.isProminentForMe = false;
+            }
+          } else {
+            // Need to check via API
+            reviewRequestsToCheck.push({
+              group,
+              notification: group.notifications[0],
+            });
+          }
+        }
+      }
+
+      // Batch check team reviews (limit to 10 to avoid too many API calls)
+      const teamCheckPromises: Promise<void>[] = [];
+      for (let i = 0; i < reviewRequestsToCheck.length && i < 10; i++) {
+        const { group, notification } = reviewRequestsToCheck[i];
+        const checkPromise = api
+          .checkTeamReviewRequest(notification.subject.url, user.login)
+          .then((isTeam) => {
+            group.isTeamReviewRequest = isTeam;
+            teamCache.set(notification.id, isTeam);
+            if (isTeam) {
+              // It's a team review, not prominent for the individual
+              group.isProminentForMe = false;
+            }
+          })
+          .catch(() => {
+            console.error(
+              "Failed to check team review for:",
+              notification.subject.url
+            );
+            // Assume it's personal on error to avoid hiding important notifications
+            group.isTeamReviewRequest = false;
+          });
+        teamCheckPromises.push(checkPromise);
+      }
+
+      await Promise.all(teamCheckPromises);
 
       // Convert to array and sort
       const groupedArray = Object.values(groups);

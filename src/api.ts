@@ -77,4 +77,41 @@ export class GitHubAPI {
       }
     );
   }
+
+  async getPullRequestDetails(url: string): Promise<any> {
+    if (!url) return null;
+
+    try {
+      return await this.request<any>(url);
+    } catch (error) {
+      console.error("Failed to fetch PR details:", error);
+      return null;
+    }
+  }
+
+  async checkTeamReviewRequest(
+    prUrl: string,
+    username: string
+  ): Promise<boolean> {
+    try {
+      const pr = await this.getPullRequestDetails(prUrl);
+      if (!pr || !pr.requested_reviewers) return false;
+
+      // Check if there are team reviewers requested
+      const hasTeamReviewers =
+        pr.requested_teams && pr.requested_teams.length > 0;
+
+      // Check if the user is personally requested
+      const isPersonallyRequested = pr.requested_reviewers.some(
+        (reviewer: any) => reviewer.login === username
+      );
+
+      // If there are team reviewers but the user isn't personally requested,
+      // this is likely a team review request
+      return hasTeamReviewers && !isPersonallyRequested;
+    } catch (error) {
+      console.error("Failed to check team review request:", error);
+      return false;
+    }
+  }
 }

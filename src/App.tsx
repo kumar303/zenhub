@@ -125,12 +125,23 @@ export function App() {
   }
 
   // Categorize notifications
-  const reviewRequests = notifications.filter((g) => g.hasReviewRequest);
+  const reviewRequests = notifications.filter(
+    (g) => g.hasReviewRequest && !g.isTeamReviewRequest
+  );
   const mentionsAndReplies = notifications.filter(
-    (g) => (g.hasMention || g.hasTeamMention) && !g.hasReviewRequest
+    (g) =>
+      g.hasMention &&
+      !g.hasTeamMention &&
+      !g.hasReviewRequest &&
+      !g.isTeamReviewRequest
   );
   const ownContent = notifications.filter(
-    (g) => g.isOwnContent && !g.hasReviewRequest && !g.hasMention
+    (g) =>
+      g.isOwnContent &&
+      !g.hasReviewRequest &&
+      !g.hasMention &&
+      !g.isTeamReviewRequest &&
+      !g.hasTeamMention
   );
   const needsAttention = notifications.filter(
     (g) =>
@@ -138,15 +149,15 @@ export function App() {
       !g.isOwnContent &&
       !g.hasReviewRequest &&
       !g.hasMention &&
-      !g.hasTeamMention
+      !g.hasTeamMention &&
+      !g.isTeamReviewRequest
   );
   const others = notifications.filter(
     (g) =>
-      !g.isProminentForMe &&
+      (!g.isProminentForMe || g.hasTeamMention || g.isTeamReviewRequest) &&
       !g.isOwnContent &&
-      !g.hasReviewRequest &&
-      !g.hasMention &&
-      !g.hasTeamMention
+      (!g.hasReviewRequest || g.isTeamReviewRequest) &&
+      (!g.hasMention || g.hasTeamMention)
   );
 
   return (
