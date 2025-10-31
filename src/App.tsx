@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "preact/hooks";
 import { Login } from "./components/Login";
 import { NotificationGroup } from "./components/NotificationGroup";
 import { CollapsibleSection } from "./components/CollapsibleSection";
+import { DebugModal } from "./components/DebugModal";
 import { useNotifications } from "./hooks/useNotifications";
 import { useClickedNotifications } from "./hooks/useClickedNotifications";
 import { STORAGE_KEYS } from "./config";
@@ -15,11 +16,15 @@ export function App() {
   const [expandedSection, setExpandedSection] = useState<string | null>(() =>
     localStorage.getItem(STORAGE_KEYS.EXPANDED_SECTION)
   );
+  const [showMenu, setShowMenu] = useState(false);
+  const [showDebugModal, setShowDebugModal] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const {
     notifications,
     user,
+    userTeams,
     loading,
     error,
     initialLoad,
@@ -96,6 +101,21 @@ export function App() {
       }
     };
   }, [isScrolled]);
+
+  // Handle clicking outside menu
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+
+    if (showMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showMenu]);
 
   const handleLogin = (newToken: string) => {
     localStorage.setItem(STORAGE_KEYS.TOKEN, newToken);
@@ -232,6 +252,47 @@ export function App() {
                 >
                   Logout
                 </button>
+
+                {/* Kebab Menu */}
+                <div className="relative" ref={menuRef}>
+                  <button
+                    onClick={() => setShowMenu(!showMenu)}
+                    className={`p-2 hover:bg-gray-100 rounded-lg transition-colors ${
+                      isScrolled ? "p-1.5" : "p-2"
+                    }`}
+                    title="More options"
+                  >
+                    <svg
+                      className={`text-gray-600 ${
+                        isScrolled ? "w-5 h-5" : "w-6 h-6"
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+                      />
+                    </svg>
+                  </button>
+
+                  {showMenu && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                      <button
+                        onClick={() => {
+                          setShowDebugModal(true);
+                          setShowMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700"
+                      >
+                        Debug
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -437,6 +498,15 @@ export function App() {
           </div>
         )}
       </div>
+
+      {/* Debug Modal */}
+      <DebugModal
+        isOpen={showDebugModal}
+        onClose={() => setShowDebugModal(false)}
+        notifications={notifications}
+        userTeams={userTeams}
+        user={user}
+      />
     </div>
   );
 }

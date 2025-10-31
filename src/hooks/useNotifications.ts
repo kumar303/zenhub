@@ -695,6 +695,7 @@ export function useNotifications(token: string | null) {
   return {
     notifications,
     user,
+    userTeams,
     loading,
     error,
     initialLoad,
