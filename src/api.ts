@@ -129,14 +129,25 @@ export class GitHubAPI {
         (hasTeamReviewers && !isPersonallyRequested) ||
         (noReviewersAtAll && !isPersonallyRequested);
 
-      // Debug logging for orphaned team reviews
+      // Enhanced debug logging for team review detection
+      console.log(`Checking team review for PR: ${prUrl}`);
+      console.log(`  hasTeamReviewers: ${hasTeamReviewers}`);
+      console.log(
+        `  requested_teams: ${pr.requested_teams?.length || 0}`,
+        pr.requested_teams?.map((t: any) => t.slug) || []
+      );
+      console.log(
+        `  requested_reviewers: ${pr.requested_reviewers?.length || 0}`,
+        pr.requested_reviewers?.map((r: any) => r.login) || []
+      );
+      console.log(
+        `  isPersonallyRequested: ${isPersonallyRequested} (username: ${username})`
+      );
+      console.log(`  noReviewersAtAll: ${noReviewersAtAll}`);
+      console.log(`  => isTeamRequest: ${isTeamRequest}`);
+
       if (noReviewersAtAll && !isPersonallyRequested) {
-        console.log(`Orphaned team review detected for PR: ${prUrl}`);
-        console.log(`  requested_teams: ${pr.requested_teams?.length || 0}`);
-        console.log(
-          `  requested_reviewers: ${pr.requested_reviewers?.length || 0}`
-        );
-        console.log(`  isPersonallyRequested: ${isPersonallyRequested}`);
+        console.log(`  ** This appears to be an orphaned team review **`);
       }
 
       return { isTeamRequest, isDraft };

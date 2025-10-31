@@ -51,6 +51,22 @@ export function DebugModal({
         isProminentForMe: group.isProminentForMe,
         notificationIds: group.notifications.map((n) => n.id),
         updatedAt: group.notifications[0].updated_at,
+        // Additional debug info for orphaned reviews
+        cacheStatus: (() => {
+          const cacheKey = `github_team_cache_v3`;
+          const cacheData = localStorage.getItem(cacheKey);
+          if (!cacheData) return "no cache";
+          try {
+            const cache = JSON.parse(cacheData);
+            const notifId = group.notifications[0].id;
+            if (cache.data && cache.data[notifId]) {
+              return `cached: ${JSON.stringify(cache.data[notifId])}`;
+            }
+            return "not in cache";
+          } catch (e) {
+            return "cache error";
+          }
+        })(),
       })),
       localStorage: {
         teamCacheKey: localStorage.getItem("github_team_cache_v2")

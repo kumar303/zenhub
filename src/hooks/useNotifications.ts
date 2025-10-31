@@ -176,7 +176,13 @@ export function useNotifications(token: string | null) {
         if (group.hasReviewRequest && group.subject.type === "PullRequest") {
           // Check cache first
           const cached = teamCache.get(group.notifications[0].id);
+          console.log(
+            `Cache check for ${group.subject.title}: ${
+              cached ? "found" : "not found"
+            }`
+          );
           if (cached && cached.isDraft !== undefined) {
+            console.log(`  Using cached data:`, cached);
             group.isTeamReviewRequest = cached.isTeamReviewRequest;
             group.isDraftPR = cached.isDraft;
             if (cached.isTeamReviewRequest) {
@@ -195,6 +201,7 @@ export function useNotifications(token: string | null) {
             }
           } else {
             // Need to check via API for team status AND draft status
+            console.log(`  Will check via API: ${group.subject.title}`);
             reviewRequestsToCheck.push({
               group,
               notification: group.notifications[0],
