@@ -65,6 +65,7 @@ export interface NotificationGroup {
   hasReply: boolean;
   hasTeamMention: boolean;
   isTeamReviewRequest: boolean;
+  isDraftPR?: boolean;
   teamSlug?: string;
   teamName?: string;
 }

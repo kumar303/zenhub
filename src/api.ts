@@ -97,26 +97,33 @@ export class GitHubAPI {
   async checkTeamReviewRequest(
     prUrl: string,
     username: string
-  ): Promise<boolean> {
+  ): Promise<{ isTeamRequest: boolean; isDraft: boolean }> {
     try {
       const pr = await this.getPullRequestDetails(prUrl);
-      if (!pr || !pr.requested_reviewers) return false;
+      if (!pr) return { isTeamRequest: false, isDraft: false };
+
+      // Check if PR is a draft
+      const isDraft = pr.draft === true;
 
       // Check if there are team reviewers requested
       const hasTeamReviewers =
         pr.requested_teams && pr.requested_teams.length > 0;
 
       // Check if the user is personally requested
-      const isPersonallyRequested = pr.requested_reviewers.some(
-        (reviewer: any) => reviewer.login === username
-      );
+      const isPersonallyRequested =
+        pr.requested_reviewers &&
+        pr.requested_reviewers.some(
+          (reviewer: any) => reviewer.login === username
+        );
 
       // If there are team reviewers but the user isn't personally requested,
       // this is likely a team review request
-      return hasTeamReviewers && !isPersonallyRequested;
+      const isTeamRequest = hasTeamReviewers && !isPersonallyRequested;
+
+      return { isTeamRequest, isDraft };
     } catch (error) {
       console.error("Failed to check team review request:", error);
-      return false;
+      return { isTeamRequest: false, isDraft: false };
     }
   }
 

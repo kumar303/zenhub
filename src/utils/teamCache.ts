@@ -6,6 +6,7 @@ const CACHE_DURATION = 12 * 60 * 60 * 1000; // 12 hours
 
 interface TeamInfo {
   isTeamReviewRequest: boolean;
+  isDraft?: boolean;
   teamSlug?: string;
   teamName?: string;
 }
@@ -25,12 +26,14 @@ class TeamCache {
     notificationId: string,
     isTeamReviewRequest: boolean,
     teamSlug?: string,
-    teamName?: string
+    teamName?: string,
+    isDraft?: boolean
   ) {
     this.cache.setItem(notificationId, {
       isTeamReviewRequest,
       teamSlug,
       teamName,
+      isDraft,
     });
   }
 

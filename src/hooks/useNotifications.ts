@@ -219,10 +219,12 @@ export function useNotifications(token: string | null) {
           const cached = teamCache.get(group.notifications[0].id);
           if (cached) {
             group.isTeamReviewRequest = cached.isTeamReviewRequest;
+            group.isDraftPR = cached.isDraft;
             if (cached.isTeamReviewRequest) {
               // It's a team review, not prominent for the individual
               group.isProminentForMe = false;
               // Check if we have team info in cache
+              // Always set team info for team review requests
               if (cached.teamSlug) {
                 group.teamSlug = cached.teamSlug;
                 group.teamName = cached.teamName;
@@ -256,39 +258,63 @@ export function useNotifications(token: string | null) {
         const { group, notification } = reviewRequestsToCheck[i];
         const checkPromise = api
           .checkTeamReviewRequest(notification.subject.url, user.login)
-          .then(async (isTeam) => {
-            group.isTeamReviewRequest = isTeam;
+          .then(async (result) => {
+            group.isTeamReviewRequest = result.isTeamRequest;
+            group.isDraftPR = result.isDraft;
 
-            if (isTeam && userTeamSlugs.length > 0) {
-              // Check which team was requested
-              const teamInfo = await api.getRequestedTeamForPR(
-                notification.subject.url,
-                userTeamSlugs
-              );
-              if (teamInfo) {
-                group.teamSlug = teamInfo.slug;
-                group.teamName = teamInfo.name;
-                teamCache.set(
-                  notification.id,
-                  true,
-                  teamInfo.slug,
-                  teamInfo.name
+            if (result.isTeamRequest) {
+              group.isTeamReviewRequest = true;
+              // It's a team review, not prominent for the individual
+              group.isProminentForMe = false;
+
+              if (userTeamSlugs.length > 0) {
+                // Check which team was requested
+                const teamInfo = await api.getRequestedTeamForPR(
+                  notification.subject.url,
+                  userTeamSlugs
                 );
+                if (teamInfo) {
+                  group.teamSlug = teamInfo.slug;
+                  group.teamName = teamInfo.name;
+                  teamCache.set(
+                    notification.id,
+                    true,
+                    teamInfo.slug,
+                    teamInfo.name,
+                    result.isDraft
+                  );
+                } else {
+                  // Couldn't determine specific team, use generic team section
+                  group.teamSlug = "_team_review_requests";
+                  group.teamName = "Team Review Requests";
+                  teamCache.set(
+                    notification.id,
+                    true,
+                    "_team_review_requests",
+                    "Team Review Requests",
+                    result.isDraft
+                  );
+                }
               } else {
-                // Couldn't determine specific team, use generic team section
+                // No teams loaded, use generic section
                 group.teamSlug = "_team_review_requests";
                 group.teamName = "Team Review Requests";
                 teamCache.set(
                   notification.id,
                   true,
                   "_team_review_requests",
-                  "Team Review Requests"
+                  "Team Review Requests",
+                  result.isDraft
                 );
               }
-              // It's a team review, not prominent for the individual
-              group.isProminentForMe = false;
             } else {
-              teamCache.set(notification.id, false);
+              teamCache.set(
+                notification.id,
+                false,
+                undefined,
+                undefined,
+                result.isDraft
+              );
             }
           })
           .catch(() => {
@@ -304,8 +330,10 @@ export function useNotifications(token: string | null) {
 
       await Promise.all(teamCheckPromises);
 
-      // Convert to array and sort
-      const groupedArray = Object.values(groups);
+      // Convert to array and filter out draft PRs
+      const groupedArray = Object.values(groups).filter(
+        (group) => !group.isDraftPR
+      );
 
       // Sort: own content first, then prominent, then others
       groupedArray.sort((a, b) => {
