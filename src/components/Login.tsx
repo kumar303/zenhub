@@ -45,8 +45,10 @@ export function Login({ onLogin }: LoginProps) {
           Login with GitHub
         </button>
 
-        <div className="mt-6 text-sm text-gray-600 text-center space-y-2">
-          <p>You'll need a Personal Access Token with:</p>
+        <div className="mt-6 text-sm text-gray-600 text-center space-y-3">
+          <p className="font-semibold">
+            You'll need a Personal Access Token with:
+          </p>
           <div className="flex justify-center gap-2">
             <span className="px-2 py-1 bg-gray-100 rounded-lg font-mono text-xs">
               notifications
@@ -55,14 +57,26 @@ export function Login({ onLogin }: LoginProps) {
               repo
             </span>
           </div>
-          <p className="text-xs">
+
+          <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-left">
+            <p className="text-amber-800 font-medium mb-1">
+              ⚠️ SSO Configuration Required
+            </p>
+            <ol className="text-amber-700 text-xs mt-1 ml-4 list-decimal space-y-1">
+              <li>Create your token with the required scopes</li>
+              <li>Click "Configure SSO" next to your new token</li>
+              <li>Authorize the token for your organization</li>
+            </ol>
+          </div>
+
+          <p className="text-xs pt-2">
             <a
               href="https://github.com/settings/tokens/new?scopes=notifications,repo"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-olympic-blue hover:text-olympic-purple underline"
+              className="text-olympic-blue hover:text-olympic-purple underline font-medium"
             >
-              Create a token →
+              Create a new token →
             </a>
           </p>
         </div>
