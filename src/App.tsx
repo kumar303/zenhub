@@ -1,4 +1,4 @@
-import { useState, useEffect } from "preact/hooks";
+import { useState, useEffect, useRef } from "preact/hooks";
 import { Login } from "./components/Login";
 import { NotificationGroup } from "./components/NotificationGroup";
 import { CollapsibleSection } from "./components/CollapsibleSection";
@@ -11,6 +11,8 @@ export function App() {
   const [token, setToken] = useState<string | null>(() =>
     localStorage.getItem(STORAGE_KEYS.TOKEN)
   );
+  const [isScrolled, setIsScrolled] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
 
   const {
     notifications,
@@ -38,6 +40,19 @@ export function App() {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [token]);
+
+  // Handle scroll events
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrolled = window.scrollY > 20;
+      if (scrolled !== isScrolled) {
+        setIsScrolled(scrolled);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [isScrolled]);
 
   const handleLogin = (newToken: string) => {
     localStorage.setItem(STORAGE_KEYS.TOKEN, newToken);
@@ -95,202 +110,227 @@ export function App() {
   );
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl min-h-screen">
-      <header className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-4xl font-bold gradient-olympic gradient-text">
-            Zenhub
-          </h1>
-          <div className="flex items-center gap-4">
-            {user && (
-              <span className="text-gray-600 flex items-center gap-2">
-                <img
-                  src={user.avatar_url}
-                  alt={user.login}
-                  className="w-8 h-8 rounded-full"
-                />
-                {user.login}
-              </span>
-            )}
-            <button
-              onClick={() => fetchNotifications()}
-              disabled={loading}
-              className="gradient-blue-yellow text-white font-medium py-2 px-4 rounded-xl hover:shadow-lg transition-all duration-200 disabled:opacity-50"
+    <div className="min-h-screen">
+      {/* Sticky header */}
+      <header
+        ref={headerRef}
+        className={`sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 transition-all duration-300 ${
+          isScrolled ? "py-2 shadow-md" : "py-4"
+        }`}
+      >
+        <div className="container mx-auto px-4 max-w-6xl">
+          <div className="flex items-center justify-between">
+            <h1
+              className={`font-bold gradient-olympic gradient-text transition-all duration-300 ${
+                isScrolled ? "text-2xl" : "text-4xl"
+              }`}
             >
-              {loading ? "Refreshing..." : "Refresh"}
-            </button>
-            <button
-              onClick={handleLogout}
-              className="bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-xl hover:bg-gray-300 transition-all duration-200"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl mb-4 animate-fade-in">
-            {error}
-          </div>
-        )}
-      </header>
-
-      {/* Loading state */}
-      {(loading || initialLoad) && notifications.length === 0 && (
-        <div className="text-center py-16">
-          <div className="inline-block">
-            <div className="flex items-center gap-3">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-olympic-blue"></div>
-              <span className="text-lg text-gray-600">
-                Loading notifications...
-              </span>
+              Zenhub
+            </h1>
+            <div className="flex items-center gap-4">
+              {user && (
+                <span className="text-gray-600 flex items-center gap-2">
+                  <img
+                    src={user.avatar_url}
+                    alt={user.login}
+                    className="w-8 h-8 rounded-full"
+                  />
+                  <span
+                    className={`transition-all duration-300 ${
+                      isScrolled ? "hidden sm:inline" : ""
+                    }`}
+                  >
+                    {user.login}
+                  </span>
+                </span>
+              )}
+              <button
+                onClick={() => fetchNotifications()}
+                disabled={loading}
+                className={`gradient-blue-yellow text-white font-medium rounded-xl hover:shadow-lg transition-all duration-200 disabled:opacity-50 ${
+                  isScrolled ? "py-1.5 px-3 text-sm" : "py-2 px-4"
+                }`}
+              >
+                {loading ? "Refreshing..." : "Refresh"}
+              </button>
+              <button
+                onClick={handleLogout}
+                className={`bg-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-300 transition-all duration-200 ${
+                  isScrolled ? "py-1.5 px-3 text-sm" : "py-2 px-4"
+                }`}
+              >
+                Logout
+              </button>
             </div>
           </div>
+
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl mt-2 animate-fade-in">
+              {error}
+            </div>
+          )}
         </div>
-      )}
+      </header>
 
-      {/* Empty state */}
-      {notifications.length === 0 && !loading && !initialLoad && !error && (
-        <div className="text-center py-16 bg-white rounded-3xl shadow-lg gradient-subtle animate-fade-in">
-          <p className="text-2xl text-gray-600">No notifications! 🎉</p>
-          <p className="text-gray-500 mt-2">You're all caught up!</p>
-        </div>
-      )}
+      {/* Main content */}
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* Loading state */}
+        {(loading || initialLoad) && notifications.length === 0 && (
+          <div className="text-center py-16">
+            <div className="inline-block">
+              <div className="flex items-center gap-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-olympic-blue"></div>
+                <span className="text-lg text-gray-600">
+                  Loading notifications...
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
-      {/* Review Requests - Top Priority */}
-      {reviewRequests.length > 0 && (
-        <CollapsibleSection
-          title="Review Requests"
-          count={reviewRequests.length}
-          gradientClass="gradient-green-red gradient-text"
-          defaultOpen={true}
-        >
-          {reviewRequests.map((group) => (
-            <NotificationGroup
-              key={group.id}
-              group={group}
-              onDismiss={() => dismissNotification(group.id)}
-              getSubjectUrl={getSubjectUrl}
-              onLinkClick={() => markAsClicked(group.id)}
-              isClicked={isClicked(group.id)}
-            />
-          ))}
-        </CollapsibleSection>
-      )}
+        {/* Empty state */}
+        {notifications.length === 0 && !loading && !initialLoad && !error && (
+          <div className="text-center py-16 bg-white rounded-3xl shadow-lg gradient-subtle animate-fade-in">
+            <p className="text-2xl text-gray-600">No notifications! 🎉</p>
+            <p className="text-gray-500 mt-2">You're all caught up!</p>
+          </div>
+        )}
 
-      {/* Mentions and Replies */}
-      {mentionsAndReplies.length > 0 && (
-        <CollapsibleSection
-          title="Mentions & Replies"
-          count={mentionsAndReplies.length}
-          gradientClass="gradient-blue-yellow gradient-text"
-          defaultOpen={true}
-        >
-          {mentionsAndReplies.map((group) => (
-            <NotificationGroup
-              key={group.id}
-              group={group}
-              onDismiss={() => dismissNotification(group.id)}
-              getSubjectUrl={getSubjectUrl}
-              onLinkClick={() => markAsClicked(group.id)}
-              isClicked={isClicked(group.id)}
-            />
-          ))}
-        </CollapsibleSection>
-      )}
-
-      {/* Your Activity */}
-      {ownContent.length > 0 && (
-        <CollapsibleSection
-          title="Your Activity"
-          count={ownContent.length}
-          gradientClass="gradient-purple-blue gradient-text"
-          defaultOpen={false}
-        >
-          {ownContent.map((group) => (
-            <NotificationGroup
-              key={group.id}
-              group={group}
-              onDismiss={() => dismissNotification(group.id)}
-              getSubjectUrl={getSubjectUrl}
-              onLinkClick={() => markAsClicked(group.id)}
-              isClicked={isClicked(group.id)}
-            />
-          ))}
-        </CollapsibleSection>
-      )}
-
-      {/* Needs Your Attention */}
-      {needsAttention.length > 0 && (
-        <CollapsibleSection
-          title="Needs Your Attention"
-          count={needsAttention.length}
-          gradientClass="gradient-olympic gradient-text"
-          defaultOpen={true}
-        >
-          {needsAttention.map((group) => (
-            <NotificationGroup
-              key={group.id}
-              group={group}
-              onDismiss={() => dismissNotification(group.id)}
-              getSubjectUrl={getSubjectUrl}
-              onLinkClick={() => markAsClicked(group.id)}
-              isClicked={isClicked(group.id)}
-            />
-          ))}
-        </CollapsibleSection>
-      )}
-
-      {/* Other Notifications */}
-      {others.length > 0 && (
-        <CollapsibleSection
-          title="Other Notifications"
-          count={others.length}
-          gradientClass="text-gray-700"
-          defaultOpen={false}
-        >
-          {others.map((group) => (
-            <NotificationGroup
-              key={group.id}
-              group={group}
-              onDismiss={() => dismissNotification(group.id)}
-              getSubjectUrl={getSubjectUrl}
-              onLinkClick={() => markAsClicked(group.id)}
-              isClicked={isClicked(group.id)}
-            />
-          ))}
-        </CollapsibleSection>
-      )}
-
-      {/* Load More Button */}
-      {hasMore && (
-        <div className="mt-8 mb-4 text-center animate-fade-in">
-          <button
-            onClick={loadMore}
-            disabled={loadingMore}
-            className="gradient-blue-yellow text-white font-medium py-3 px-6 rounded-xl hover:shadow-lg transition-all duration-200 disabled:opacity-50"
+        {/* Review Requests - Top Priority */}
+        {reviewRequests.length > 0 && (
+          <CollapsibleSection
+            title="Review Requests"
+            count={reviewRequests.length}
+            gradientClass="gradient-green-red gradient-text"
+            defaultOpen={true}
           >
-            {loadingMore ? (
-              <span className="flex items-center gap-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                Loading more...
-              </span>
-            ) : (
-              "Load More Notifications"
-            )}
-          </button>
-        </div>
-      )}
+            {reviewRequests.map((group) => (
+              <NotificationGroup
+                key={group.id}
+                group={group}
+                onDismiss={() => dismissNotification(group.id)}
+                getSubjectUrl={getSubjectUrl}
+                onLinkClick={() => markAsClicked(group.id)}
+                isClicked={isClicked(group.id)}
+              />
+            ))}
+          </CollapsibleSection>
+        )}
 
-      {/* Notification count */}
-      {notifications.length > 0 && (
-        <div className="mt-4 mb-4 text-center text-sm text-gray-500 animate-fade-in">
-          <p>
-            Showing {notifications.length} notification
-            {notifications.length !== 1 ? "s" : ""}
-          </p>
-        </div>
-      )}
+        {/* Mentions and Replies */}
+        {mentionsAndReplies.length > 0 && (
+          <CollapsibleSection
+            title="Mentions & Replies"
+            count={mentionsAndReplies.length}
+            gradientClass="gradient-blue-yellow gradient-text"
+            defaultOpen={true}
+          >
+            {mentionsAndReplies.map((group) => (
+              <NotificationGroup
+                key={group.id}
+                group={group}
+                onDismiss={() => dismissNotification(group.id)}
+                getSubjectUrl={getSubjectUrl}
+                onLinkClick={() => markAsClicked(group.id)}
+                isClicked={isClicked(group.id)}
+              />
+            ))}
+          </CollapsibleSection>
+        )}
+
+        {/* Your Activity */}
+        {ownContent.length > 0 && (
+          <CollapsibleSection
+            title="Your Activity"
+            count={ownContent.length}
+            gradientClass="gradient-purple-blue gradient-text"
+            defaultOpen={false}
+          >
+            {ownContent.map((group) => (
+              <NotificationGroup
+                key={group.id}
+                group={group}
+                onDismiss={() => dismissNotification(group.id)}
+                getSubjectUrl={getSubjectUrl}
+                onLinkClick={() => markAsClicked(group.id)}
+                isClicked={isClicked(group.id)}
+              />
+            ))}
+          </CollapsibleSection>
+        )}
+
+        {/* Needs Your Attention */}
+        {needsAttention.length > 0 && (
+          <CollapsibleSection
+            title="Needs Your Attention"
+            count={needsAttention.length}
+            gradientClass="gradient-olympic gradient-text"
+            defaultOpen={true}
+          >
+            {needsAttention.map((group) => (
+              <NotificationGroup
+                key={group.id}
+                group={group}
+                onDismiss={() => dismissNotification(group.id)}
+                getSubjectUrl={getSubjectUrl}
+                onLinkClick={() => markAsClicked(group.id)}
+                isClicked={isClicked(group.id)}
+              />
+            ))}
+          </CollapsibleSection>
+        )}
+
+        {/* Other Notifications */}
+        {others.length > 0 && (
+          <CollapsibleSection
+            title="Other Notifications"
+            count={others.length}
+            gradientClass="text-gray-700"
+            defaultOpen={false}
+          >
+            {others.map((group) => (
+              <NotificationGroup
+                key={group.id}
+                group={group}
+                onDismiss={() => dismissNotification(group.id)}
+                getSubjectUrl={getSubjectUrl}
+                onLinkClick={() => markAsClicked(group.id)}
+                isClicked={isClicked(group.id)}
+              />
+            ))}
+          </CollapsibleSection>
+        )}
+
+        {/* Load More Button */}
+        {hasMore && (
+          <div className="mt-8 mb-4 text-center animate-fade-in">
+            <button
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="gradient-blue-yellow text-white font-medium py-3 px-6 rounded-xl hover:shadow-lg transition-all duration-200 disabled:opacity-50"
+            >
+              {loadingMore ? (
+                <span className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Loading more...
+                </span>
+              ) : (
+                "Load More Notifications"
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Notification count */}
+        {notifications.length > 0 && (
+          <div className="mt-4 mb-4 text-center text-sm text-gray-500 animate-fade-in">
+            <p>
+              Showing {notifications.length} notification
+              {notifications.length !== 1 ? "s" : ""}
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
