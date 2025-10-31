@@ -13,4 +13,5 @@ export const STORAGE_KEYS = {
   TOKEN: "github_token",
   DISMISSED: "dismissed_notifications",
   USER: "github_user",
+  EXPANDED_SECTION: "expanded_section",
 };

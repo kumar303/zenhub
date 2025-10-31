@@ -1,11 +1,11 @@
-import { useState } from "preact/hooks";
 import { ComponentChildren } from "preact";
 
 interface CollapsibleSectionProps {
   title: string;
   count: number;
   gradientClass?: string;
-  defaultOpen?: boolean;
+  isOpen: boolean;
+  onToggle: () => void;
   isNavScrolled?: boolean;
   children: ComponentChildren;
 }
@@ -14,12 +14,11 @@ export function CollapsibleSection({
   title,
   count,
   gradientClass = "text-gray-700",
-  defaultOpen = true,
+  isOpen,
+  onToggle,
   isNavScrolled = false,
   children,
 }: CollapsibleSectionProps) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-
   // Adjust top position based on nav scroll state
   const topPosition = isNavScrolled ? "top-[53px]" : "top-[73px]";
 
@@ -27,7 +26,7 @@ export function CollapsibleSection({
     <section className="animate-fade-in">
       <div
         className={`sticky ${topPosition} z-40 bg-white py-3 mb-4 -mx-4 px-4 cursor-pointer select-none border-b border-gray-200`}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={onToggle}
       >
         <div className="flex items-center justify-between">
           <h2 className={`text-2xl font-bold ${gradientClass}`}>

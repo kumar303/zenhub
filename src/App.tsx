@@ -12,6 +12,9 @@ export function App() {
     localStorage.getItem(STORAGE_KEYS.TOKEN)
   );
   const [isScrolled, setIsScrolled] = useState(false);
+  const [expandedSection, setExpandedSection] = useState<string | null>(() =>
+    localStorage.getItem(STORAGE_KEYS.EXPANDED_SECTION)
+  );
   const headerRef = useRef<HTMLElement>(null);
 
   const {
@@ -104,6 +107,16 @@ export function App() {
     localStorage.removeItem(STORAGE_KEYS.USER);
     setToken(null);
     window.location.reload();
+  };
+
+  const handleSectionToggle = (sectionKey: string) => {
+    const newExpanded = expandedSection === sectionKey ? null : sectionKey;
+    setExpandedSection(newExpanded);
+    if (newExpanded) {
+      localStorage.setItem(STORAGE_KEYS.EXPANDED_SECTION, newExpanded);
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.EXPANDED_SECTION);
+    }
   };
 
   if (!token) {
@@ -261,7 +274,8 @@ export function App() {
             title="Review Requests"
             count={reviewRequests.length}
             gradientClass="gradient-green-red gradient-text"
-            defaultOpen={true}
+            isOpen={expandedSection === "review-requests"}
+            onToggle={() => handleSectionToggle("review-requests")}
             isNavScrolled={isScrolled}
           >
             {reviewRequests.map((group) => (
@@ -283,7 +297,8 @@ export function App() {
             title="Mentions & Replies"
             count={mentionsAndReplies.length}
             gradientClass="gradient-blue-yellow gradient-text"
-            defaultOpen={true}
+            isOpen={expandedSection === "mentions-replies"}
+            onToggle={() => handleSectionToggle("mentions-replies")}
             isNavScrolled={isScrolled}
           >
             {mentionsAndReplies.map((group) => (
@@ -306,7 +321,8 @@ export function App() {
             title={teamData.teamName}
             count={teamData.groups.length}
             gradientClass="gradient-green-blue gradient-text"
-            defaultOpen={true}
+            isOpen={expandedSection === `team-${teamSlug}`}
+            onToggle={() => handleSectionToggle(`team-${teamSlug}`)}
             isNavScrolled={isScrolled}
           >
             {teamData.groups.map((group) => (
@@ -328,7 +344,8 @@ export function App() {
             title="Your Activity"
             count={ownContent.length}
             gradientClass="gradient-purple-blue gradient-text"
-            defaultOpen={false}
+            isOpen={expandedSection === "your-activity"}
+            onToggle={() => handleSectionToggle("your-activity")}
             isNavScrolled={isScrolled}
           >
             {ownContent.map((group) => (
@@ -350,7 +367,8 @@ export function App() {
             title="Needs Your Attention"
             count={needsAttention.length}
             gradientClass="gradient-olympic gradient-text"
-            defaultOpen={true}
+            isOpen={expandedSection === "needs-attention"}
+            onToggle={() => handleSectionToggle("needs-attention")}
             isNavScrolled={isScrolled}
           >
             {needsAttention.map((group) => (
@@ -372,7 +390,8 @@ export function App() {
             title="Other Notifications"
             count={others.length}
             gradientClass="text-gray-700"
-            defaultOpen={false}
+            isOpen={expandedSection === "other"}
+            onToggle={() => handleSectionToggle("other")}
             isNavScrolled={isScrolled}
           >
             {others.map((group) => (
