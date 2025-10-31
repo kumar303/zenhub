@@ -290,6 +290,26 @@ export function App() {
                       >
                         Debug
                       </button>
+                      <button
+                        onClick={() => {
+                          if (
+                            confirm(
+                              "Clear all team review cache? This will force fresh API checks."
+                            )
+                          ) {
+                            localStorage.removeItem("github_team_cache_v3");
+                            localStorage.removeItem("github_team_cache_v2");
+                            localStorage.removeItem("github_team_cache");
+                            alert(
+                              "Cache cleared! Refresh the page to see changes."
+                            );
+                          }
+                          setShowMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700 border-t border-gray-200"
+                      >
+                        Clear Cache
+                      </button>
                     </div>
                   )}
                 </div>

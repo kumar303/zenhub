@@ -129,6 +129,16 @@ export class GitHubAPI {
         (hasTeamReviewers && !isPersonallyRequested) ||
         (noReviewersAtAll && !isPersonallyRequested);
 
+      // Debug logging for orphaned team reviews
+      if (noReviewersAtAll && !isPersonallyRequested) {
+        console.log(`Orphaned team review detected for PR: ${prUrl}`);
+        console.log(`  requested_teams: ${pr.requested_teams?.length || 0}`);
+        console.log(
+          `  requested_reviewers: ${pr.requested_reviewers?.length || 0}`
+        );
+        console.log(`  isPersonallyRequested: ${isPersonallyRequested}`);
+      }
+
       return { isTeamRequest, isDraft };
     } catch (error) {
       console.error("Failed to check team review request:", error);
