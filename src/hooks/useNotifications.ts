@@ -164,7 +164,7 @@ export function useNotifications(token: string | null) {
       }
 
       // Third pass: Check for team review requests and identify which team
-      // Collect notifications that need team review checks
+      // Collect notifications that need review checks (team or draft status)
       const reviewRequestsToCheck: Array<{
         group: NotificationGroup;
         notification: GitHubNotification;
@@ -176,7 +176,7 @@ export function useNotifications(token: string | null) {
         if (group.hasReviewRequest && group.subject.type === "PullRequest") {
           // Check cache first
           const cached = teamCache.get(group.notifications[0].id);
-          if (cached) {
+          if (cached && cached.isDraft !== undefined) {
             group.isTeamReviewRequest = cached.isTeamReviewRequest;
             group.isDraftPR = cached.isDraft;
             if (cached.isTeamReviewRequest) {
@@ -194,7 +194,7 @@ export function useNotifications(token: string | null) {
               }
             }
           } else {
-            // Need to check via API
+            // Need to check via API for team status AND draft status
             reviewRequestsToCheck.push({
               group,
               notification: group.notifications[0],

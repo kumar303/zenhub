@@ -1,7 +1,7 @@
 // Cache for team review requests and mentions to avoid repeated API calls
 import { ItemCache } from "./cache";
 
-const TEAM_CACHE_KEY = "github_team_cache";
+const TEAM_CACHE_KEY = "github_team_cache_v2"; // v2 includes draft status
 const CACHE_DURATION = 12 * 60 * 60 * 1000; // 12 hours
 
 interface TeamInfo {
