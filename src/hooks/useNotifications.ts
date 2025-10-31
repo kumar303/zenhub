@@ -370,7 +370,7 @@ export function useNotifications(token: string | null) {
 
   const checkForNewProminentNotifications = useCallback(
     (
-      groups: NotificationGroup[], 
+      groups: NotificationGroup[],
       skipNotifications: boolean = false,
       newNotificationIds?: Set<string>
     ) => {
@@ -389,7 +389,7 @@ export function useNotifications(token: string | null) {
         const key = `notified_${latestNotification.id}`;
 
         // If newNotificationIds is provided, only notify for truly new notifications
-        const isNewNotification = newNotificationIds 
+        const isNewNotification = newNotificationIds
           ? newNotificationIds.has(latestNotification.id)
           : true;
 
@@ -507,7 +507,7 @@ export function useNotifications(token: string | null) {
 
     // Store current notification IDs to identify new ones
     const existingNotificationIds = new Set(
-      notifications.flatMap(group => group.notifications.map(n => n.id))
+      notifications.flatMap((group) => group.notifications.map((n) => n.id))
     );
 
     try {

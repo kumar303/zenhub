@@ -10,7 +10,7 @@ npm run build
 
 # Deploy to Quick
 echo "☁️  Deploying to Quick..."
-quick deploy dist zenhub
+quick deploy dist zenhub --force
 
 echo "✅ Deployment complete!"
 echo "🌐 Your app is available at: https://zenhub.quick.shopify.io"
