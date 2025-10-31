@@ -447,15 +447,22 @@ export function useNotifications(token: string | null) {
     initializeData();
 
     // Set up polling for new notifications
-    const interval = setInterval(() => {
-      if (mounted) {
-        fetchNotifications();
-      }
-    }, 60000); // Every minute
+    let refreshInterval: NodeJS.Timeout;
+
+    // Delay setting up the interval to avoid circular dependency
+    setTimeout(() => {
+      refreshInterval = setInterval(() => {
+        if (mounted && currentPage > 0) {
+          refreshAllPages();
+        }
+      }, 60000); // Every minute
+    }, 0);
 
     return () => {
       mounted = false;
-      clearInterval(interval);
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]); // Only depend on token changes
@@ -474,6 +481,51 @@ export function useNotifications(token: string | null) {
     }
   }, [currentPage, hasMore, loadingMore, fetchNotifications]);
 
+  // Refresh all currently loaded pages
+  const refreshAllPages = useCallback(async () => {
+    if (!api || currentPage === 0) return;
+
+    // Don't show loading spinner for refresh
+    setError(null);
+
+    try {
+      // Fetch all pages up to current page
+      const allPromises: Promise<GitHubNotification[]>[] = [];
+      for (let p = 1; p <= currentPage; p++) {
+        allPromises.push(api.getNotifications(p, 50));
+      }
+
+      const allResults = await Promise.all(allPromises);
+      const allNotifications = allResults.flat();
+
+      // Check if there are more pages based on the last page
+      setHasMore(allResults[allResults.length - 1].length === 50);
+
+      // Process all notifications at once
+      const processed = await processNotifications(allNotifications);
+      setNotifications(processed);
+
+      // Check for new prominent notifications
+      checkForNewProminentNotifications(processed);
+    } catch (err: any) {
+      if (err.message === "UNAUTHORIZED") {
+        setError("Authentication expired. Please login again.");
+        setTimeout(() => {
+          localStorage.removeItem(STORAGE_KEYS.TOKEN);
+          localStorage.removeItem(STORAGE_KEYS.USER);
+          window.location.reload();
+        }, 2000);
+      } else {
+        console.error("Failed to refresh notifications:", err);
+      }
+    }
+  }, [
+    api,
+    currentPage,
+    processNotifications,
+    checkForNewProminentNotifications,
+  ]);
+
   return {
     notifications,
     user,
@@ -481,6 +533,7 @@ export function useNotifications(token: string | null) {
     error,
     initialLoad,
     fetchNotifications,
+    refreshAllPages,
     dismissNotification,
     loadMore,
     hasMore,

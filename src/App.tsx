@@ -20,7 +20,7 @@ export function App() {
     loading,
     error,
     initialLoad,
-    fetchNotifications,
+    refreshAllPages,
     dismissNotification,
     loadMore,
     hasMore,
@@ -196,7 +196,7 @@ export function App() {
                   </span>
                 )}
                 <button
-                  onClick={() => fetchNotifications()}
+                  onClick={() => refreshAllPages()}
                   disabled={loading}
                   className={`gradient-blue-yellow text-white font-medium rounded-xl hover:shadow-lg transition-all duration-200 disabled:opacity-50 ${
                     isScrolled ? "py-1.5 px-3 text-sm" : "py-2 px-4"
