@@ -369,7 +369,11 @@ export function useNotifications(token: string | null) {
   );
 
   const checkForNewProminentNotifications = useCallback(
-    (groups: NotificationGroup[], skipNotifications: boolean = false) => {
+    (
+      groups: NotificationGroup[], 
+      skipNotifications: boolean = false,
+      newNotificationIds?: Set<string>
+    ) => {
       if (
         !("Notification" in window) ||
         Notification.permission !== "granted" ||
@@ -384,7 +388,12 @@ export function useNotifications(token: string | null) {
         const latestNotification = group.notifications[0];
         const key = `notified_${latestNotification.id}`;
 
-        if (!sessionStorage.getItem(key)) {
+        // If newNotificationIds is provided, only notify for truly new notifications
+        const isNewNotification = newNotificationIds 
+          ? newNotificationIds.has(latestNotification.id)
+          : true;
+
+        if (!sessionStorage.getItem(key) && isNewNotification) {
           sessionStorage.setItem(key, "true");
 
           let title = `${group.subject.title}`;
@@ -496,6 +505,11 @@ export function useNotifications(token: string | null) {
     // Don't show loading spinner for refresh
     setError(null);
 
+    // Store current notification IDs to identify new ones
+    const existingNotificationIds = new Set(
+      notifications.flatMap(group => group.notifications.map(n => n.id))
+    );
+
     try {
       // Fetch all pages up to current page
       const allPromises: Promise<GitHubNotification[]>[] = [];
@@ -513,8 +527,18 @@ export function useNotifications(token: string | null) {
       const processed = await processNotifications(allNotifications);
       setNotifications(processed);
 
-      // Check for new prominent notifications
-      checkForNewProminentNotifications(processed);
+      // Identify which notifications are truly new (not present before refresh)
+      const newNotificationIds = new Set<string>();
+      for (const group of processed) {
+        for (const notification of group.notifications) {
+          if (!existingNotificationIds.has(notification.id)) {
+            newNotificationIds.add(notification.id);
+          }
+        }
+      }
+
+      // Check for new prominent notifications, passing the set of new IDs
+      checkForNewProminentNotifications(processed, false, newNotificationIds);
     } catch (err: any) {
       if (err.message === "UNAUTHORIZED") {
         setError("Authentication expired. Please login again.");
@@ -532,6 +556,7 @@ export function useNotifications(token: string | null) {
     currentPage,
     processNotifications,
     checkForNewProminentNotifications,
+    notifications,
   ]);
 
   return {
