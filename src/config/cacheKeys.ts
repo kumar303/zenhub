@@ -2,11 +2,11 @@
 export const CACHE_KEYS = {
   // Team cache for storing team review request information
   TEAM_CACHE: "github_team_cache_v3", // v3 includes orphaned team review logic
-  
+
   // Previous versions (for cleanup)
   TEAM_CACHE_V2: "github_team_cache_v2",
   TEAM_CACHE_V1: "github_team_cache",
-  
+
   // User teams cache
   USER_TEAMS: "github_user_teams",
 } as const;

@@ -13,7 +13,10 @@ class TeamCache {
   private cache: ItemCache<TeamInfo>;
 
   constructor() {
-    this.cache = new ItemCache(CACHE_KEYS.TEAM_CACHE, CACHE_DURATIONS.TEAM_CACHE);
+    this.cache = new ItemCache(
+      CACHE_KEYS.TEAM_CACHE,
+      CACHE_DURATIONS.TEAM_CACHE
+    );
   }
 
   get(notificationId: string): TeamInfo | null {
@@ -48,7 +51,7 @@ class TeamCache {
   clearNotification(notificationId: string) {
     const cacheData = localStorage.getItem(CACHE_KEYS.TEAM_CACHE);
     if (!cacheData) return;
-    
+
     try {
       const cache = JSON.parse(cacheData);
       if (cache.data && cache.data[notificationId]) {
