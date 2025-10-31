@@ -423,6 +423,7 @@ export function useNotifications(token: string | null) {
     user,
     loading,
     error,
+    initialLoad,
     fetchNotifications,
     dismissNotification,
     loadMore,

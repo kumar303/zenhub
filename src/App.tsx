@@ -17,6 +17,7 @@ export function App() {
     user,
     loading,
     error,
+    initialLoad,
     fetchNotifications,
     dismissNotification,
     loadMore,
@@ -135,7 +136,7 @@ export function App() {
       </header>
 
       {/* Loading state */}
-      {loading && notifications.length === 0 && (
+      {(loading || initialLoad) && notifications.length === 0 && (
         <div className="text-center py-16">
           <div className="inline-block">
             <div className="flex items-center gap-3">
@@ -149,7 +150,7 @@ export function App() {
       )}
 
       {/* Empty state */}
-      {notifications.length === 0 && !loading && !error && (
+      {notifications.length === 0 && !loading && !initialLoad && !error && (
         <div className="text-center py-16 bg-white rounded-3xl shadow-lg gradient-subtle animate-fade-in">
           <p className="text-2xl text-gray-600">No notifications! 🎉</p>
           <p className="text-gray-500 mt-2">You're all caught up!</p>
