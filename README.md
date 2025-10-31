@@ -1,14 +1,15 @@
-# GitHub Notifications Manager
+# Zenhub
 
-A beautiful and functional web application for managing GitHub notifications with an 80s Olympics-inspired design.
+Github notifications but chill.
+
+# 🧘🏻
+
+https://zenhub.quick.shopify.io
 
 ## Features
 
-- 🔐 **Secure Authentication**: Login with GitHub Personal Access Token
 - 📊 **Smart Grouping**: Notifications grouped by issue/PR
 - ⭐ **Priority Management**: Your own content and mentions appear first
-- 🎨 **80s Olympics Theme**: Colorful gradients with accessible contrast
-- 💾 **Persistent State**: Dismissed notifications saved to local storage
 - 🔔 **Web Notifications**: Get browser notifications for important updates
 - 🔄 **Auto-refresh**: Polls for new notifications every minute
 
@@ -38,37 +39,3 @@ To deploy to Quick:
 ```bash
 ./deploy.sh
 ```
-
-Or manually:
-
-```bash
-npm run build
-quick deploy dist zenhub
-```
-
-The app will be available at: https://zenhub.quick.shopify.io
-
-## GitHub Token
-
-You'll need a GitHub Personal Access Token with the following scopes:
-
-- `notifications` - Access your notifications
-- `repo` - Access repository information
-
-Create one at: https://github.com/settings/tokens/new
-
-## Tech Stack
-
-- **Preact**: Lightweight React alternative
-- **TypeScript**: Type-safe development
-- **Tailwind CSS**: Utility-first styling
-- **Vite**: Fast build tool
-
-## Development
-
-The project structure:
-
-- `/src/components/` - React components
-- `/src/hooks/` - Custom hooks
-- `/src/api.ts` - GitHub API integration
-- `/src/types.ts` - TypeScript type definitions
