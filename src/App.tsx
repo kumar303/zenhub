@@ -5,7 +5,7 @@ import { CollapsibleSection } from "./components/CollapsibleSection";
 import { useNotifications } from "./hooks/useNotifications";
 import { useClickedNotifications } from "./hooks/useClickedNotifications";
 import { STORAGE_KEYS } from "./config";
-import type { NotificationGroup as NotificationGroupType } from "./types";
+import { getSubjectUrl } from "./utils/url";
 
 export function App() {
   const [token, setToken] = useState<string | null>(() =>
@@ -104,20 +104,6 @@ export function App() {
     localStorage.removeItem(STORAGE_KEYS.USER);
     setToken(null);
     window.location.reload();
-  };
-
-  const getSubjectUrl = (subject: NotificationGroupType["subject"]) => {
-    // Convert API URL to web URL
-    if (!subject.url) return "#";
-
-    if (subject.type === "PullRequest") {
-      return subject.url
-        .replace("api.github.com/repos", "github.com")
-        .replace("/pulls/", "/pull/");
-    } else if (subject.type === "Issue") {
-      return subject.url.replace("api.github.com/repos", "github.com");
-    }
-    return "#";
   };
 
   if (!token) {

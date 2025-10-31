@@ -4,6 +4,7 @@ import { STORAGE_KEYS } from "../config";
 import { stateCache } from "../utils/stateCache";
 import { teamCache } from "../utils/teamCache";
 import { teamsCache } from "../utils/teamsCache";
+import { getSubjectUrl } from "../utils/url";
 import type {
   GitHubUser,
   GitHubNotification,
@@ -534,12 +535,21 @@ export function useNotifications(token: string | null) {
             title = `[Mention] ${title}`;
           }
 
-          new Notification(title, {
+          const notification = new Notification(title, {
             body: body,
             icon: "https://github.githubassets.com/favicons/favicon.png",
             tag: group.id,
             requireInteraction: true,
           });
+
+          // Add click handler to open the GitHub URL
+          notification.onclick = () => {
+            const url = getSubjectUrl(group.subject);
+            if (url && url !== "#") {
+              window.open(url, "_blank");
+            }
+            notification.close();
+          };
         }
       }
     },
