@@ -325,7 +325,11 @@ export function useNotifications(token: string | null) {
   );
 
   const fetchNotifications = useCallback(
-    async (page: number = 1, append: boolean = false) => {
+    async (
+      page: number = 1,
+      append: boolean = false,
+      isManualLoad: boolean = false
+    ) => {
       if (!api) return;
 
       // Don't show loading spinner on subsequent fetches unless it's the initial load
@@ -405,8 +409,9 @@ export function useNotifications(token: string | null) {
         }
 
         // Check for new prominent notifications
-        // Skip web notifications on initial page load to prevent notification spam
-        checkForNewProminentNotifications(processed, isFirstSessionLoad);
+        // Skip web notifications on initial page load and manual loads (Load More)
+        const skipNotifications = isFirstSessionLoad || isManualLoad;
+        checkForNewProminentNotifications(processed, skipNotifications);
 
         // Mark initial load as complete
         if (initialLoad) {
@@ -442,7 +447,15 @@ export function useNotifications(token: string | null) {
         setLoadingMore(false);
       }
     },
-    [api, dismissed, processNotifications, initialLoad, error, notifications]
+    [
+      api,
+      dismissed,
+      processNotifications,
+      initialLoad,
+      error,
+      notifications,
+      isFirstSessionLoad,
+    ]
   );
 
   const checkForNewProminentNotifications = useCallback(
@@ -583,7 +596,8 @@ export function useNotifications(token: string | null) {
   const loadMore = useCallback(async () => {
     if (!loadingMore && hasMore && currentPage < 10) {
       // Limit to 10 pages max (500 notifications)
-      await fetchNotifications(currentPage + 1, true);
+      // Pass isManualLoad = true to prevent web notifications
+      await fetchNotifications(currentPage + 1, true, true);
     }
   }, [currentPage, hasMore, loadingMore, fetchNotifications]);
 
