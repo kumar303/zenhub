@@ -18,6 +18,7 @@ export function useNotifications(token: string | null) {
   });
   const [loading, setLoading] = useState(true); // Start with loading true
   const [initialLoad, setInitialLoad] = useState(true);
+  const [isFirstSessionLoad, setIsFirstSessionLoad] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState<string[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.DISMISSED);
@@ -335,11 +336,17 @@ export function useNotifications(token: string | null) {
         }
 
         // Check for new prominent notifications
-        checkForNewProminentNotifications(processed);
+        // Skip web notifications on initial page load to prevent notification spam
+        checkForNewProminentNotifications(processed, isFirstSessionLoad);
 
         // Mark initial load as complete
         if (initialLoad) {
           setInitialLoad(false);
+        }
+
+        // Mark first session load as complete after first fetch
+        if (isFirstSessionLoad) {
+          setIsFirstSessionLoad(false);
         }
       } catch (err: any) {
         if (err.message === "UNAUTHORIZED") {
@@ -362,10 +369,11 @@ export function useNotifications(token: string | null) {
   );
 
   const checkForNewProminentNotifications = useCallback(
-    (groups: NotificationGroup[]) => {
+    (groups: NotificationGroup[], skipNotifications: boolean = false) => {
       if (
         !("Notification" in window) ||
-        Notification.permission !== "granted"
+        Notification.permission !== "granted" ||
+        skipNotifications
       ) {
         return;
       }
