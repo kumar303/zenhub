@@ -7,7 +7,7 @@ export function Login({ onLogin }: LoginProps) {
     // For now, using Personal Access Token method
     // In production, you'd implement proper OAuth flow with a backend
     const token = prompt(
-      'Enter your GitHub Personal Access Token with "notifications" and "repo" scopes:\n\n' +
+      'Enter your GitHub Personal Access Token with "notifications", "repo", and "read:org" scopes:\n\n' +
         "You can create one at: https://github.com/settings/tokens/new"
     );
 
@@ -54,6 +54,9 @@ export function Login({ onLogin }: LoginProps) {
             <span className="px-2 py-1 bg-gray-100 rounded-lg font-mono text-xs">
               repo
             </span>
+            <span className="px-2 py-1 bg-gray-100 rounded-lg font-mono text-xs">
+              read:org
+            </span>
           </div>
 
           <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-left">
@@ -69,7 +72,7 @@ export function Login({ onLogin }: LoginProps) {
 
           <p className="text-xs pt-2">
             <a
-              href="https://github.com/settings/tokens/new?scopes=notifications,repo"
+              href="https://github.com/settings/tokens/new?scopes=notifications,repo,read:org"
               target="_blank"
               rel="noopener noreferrer"
               className="text-olympic-blue hover:text-olympic-purple underline font-medium"

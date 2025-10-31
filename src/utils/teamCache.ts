@@ -5,6 +5,8 @@ const CACHE_DURATION = 12 * 60 * 60 * 1000; // 12 hours
 interface TeamInfo {
   isTeamReviewRequest: boolean;
   timestamp: number;
+  teamSlug?: string;
+  teamName?: string;
 }
 
 interface TeamCacheData {
@@ -55,10 +57,17 @@ export class TeamCache {
     return null;
   }
 
-  set(notificationId: string, isTeamReviewRequest: boolean) {
+  set(
+    notificationId: string,
+    isTeamReviewRequest: boolean,
+    teamSlug?: string,
+    teamName?: string
+  ) {
     this.cache[notificationId] = {
       isTeamReviewRequest,
       timestamp: Date.now(),
+      teamSlug,
+      teamName,
     };
     this.saveCache();
   }

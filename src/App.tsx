@@ -135,6 +135,24 @@ export function App() {
       !g.hasReviewRequest &&
       !g.isTeamReviewRequest
   );
+
+  // Group team notifications by team
+  const teamNotifications: Record<
+    string,
+    { teamName: string; groups: typeof notifications }
+  > = {};
+  notifications.forEach((group) => {
+    if (group.teamSlug && (group.isTeamReviewRequest || group.hasTeamMention)) {
+      if (!teamNotifications[group.teamSlug]) {
+        teamNotifications[group.teamSlug] = {
+          teamName: group.teamName || group.teamSlug,
+          groups: [],
+        };
+      }
+      teamNotifications[group.teamSlug].groups.push(group);
+    }
+  });
+
   const ownContent = notifications.filter(
     (g) =>
       g.isOwnContent &&
@@ -154,10 +172,12 @@ export function App() {
   );
   const others = notifications.filter(
     (g) =>
-      (!g.isProminentForMe || g.hasTeamMention || g.isTeamReviewRequest) &&
+      (!g.isProminentForMe ||
+        (g.hasTeamMention && !g.teamSlug) ||
+        (g.isTeamReviewRequest && !g.teamSlug)) &&
       !g.isOwnContent &&
-      (!g.hasReviewRequest || g.isTeamReviewRequest) &&
-      (!g.hasMention || g.hasTeamMention)
+      (!g.hasReviewRequest || (g.isTeamReviewRequest && !g.teamSlug)) &&
+      (!g.hasMention || (g.hasTeamMention && !g.teamSlug))
   );
 
   return (
@@ -291,6 +311,29 @@ export function App() {
             ))}
           </CollapsibleSection>
         )}
+
+        {/* Team-specific sections */}
+        {Object.entries(teamNotifications).map(([teamSlug, teamData]) => (
+          <CollapsibleSection
+            key={teamSlug}
+            title={teamData.teamName}
+            count={teamData.groups.length}
+            gradientClass="gradient-green-blue gradient-text"
+            defaultOpen={true}
+            isNavScrolled={isScrolled}
+          >
+            {teamData.groups.map((group) => (
+              <NotificationGroup
+                key={group.id}
+                group={group}
+                onDismiss={() => dismissNotification(group.id)}
+                getSubjectUrl={getSubjectUrl}
+                onLinkClick={() => markAsClicked(group.id)}
+                isClicked={isClicked(group.id)}
+              />
+            ))}
+          </CollapsibleSection>
+        ))}
 
         {/* Your Activity */}
         {ownContent.length > 0 && (

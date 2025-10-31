@@ -3,10 +3,12 @@ import { GitHubAPI } from "../api";
 import { STORAGE_KEYS } from "../config";
 import { stateCache } from "../utils/stateCache";
 import { teamCache } from "../utils/teamCache";
+import { teamsCache } from "../utils/teamsCache";
 import type {
   GitHubUser,
   GitHubNotification,
   NotificationGroup,
+  GitHubTeam,
 } from "../types";
 
 export function useNotifications(token: string | null) {
@@ -16,6 +18,7 @@ export function useNotifications(token: string | null) {
     const saved = localStorage.getItem(STORAGE_KEYS.USER);
     return saved ? JSON.parse(saved) : null;
   });
+  const [userTeams, setUserTeams] = useState<GitHubTeam[]>([]);
   const [loading, setLoading] = useState(true); // Start with loading true
   const [initialLoad, setInitialLoad] = useState(true);
   const [isFirstSessionLoad, setIsFirstSessionLoad] = useState(true);
@@ -49,6 +52,26 @@ export function useNotifications(token: string | null) {
           window.location.reload();
         }, 2000);
       }
+    }
+  }, [api]);
+
+  const fetchUserTeams = useCallback(async () => {
+    if (!api) return;
+
+    // Check cache first
+    const cachedTeams = teamsCache.get();
+    if (cachedTeams) {
+      setUserTeams(cachedTeams);
+      return;
+    }
+
+    try {
+      const teams = await api.getUserTeams();
+      setUserTeams(teams);
+      teamsCache.set(teams);
+    } catch (err: any) {
+      console.error("Failed to fetch user teams:", err);
+      // Don't crash if teams can't be fetched, just continue without team info
     }
   }, [api]);
 
@@ -181,22 +204,29 @@ export function useNotifications(token: string | null) {
         }
       }
 
-      // Third pass: Check for team review requests
+      // Third pass: Check for team review requests and identify which team
       // Collect notifications that need team review checks
       const reviewRequestsToCheck: Array<{
         group: NotificationGroup;
         notification: GitHubNotification;
       }> = [];
 
+      const userTeamSlugs = userTeams.map((team) => team.slug);
+
       for (const group of Object.values(groups)) {
         if (group.hasReviewRequest && group.subject.type === "PullRequest") {
           // Check cache first
-          const cached = teamCache.isTeamReview(group.notifications[0].id);
-          if (cached !== null) {
-            group.isTeamReviewRequest = cached;
-            if (cached) {
+          const cached = teamCache.get(group.notifications[0].id);
+          if (cached) {
+            group.isTeamReviewRequest = cached.isTeamReviewRequest;
+            if (cached.isTeamReviewRequest) {
               // It's a team review, not prominent for the individual
               group.isProminentForMe = false;
+              // Check if we have team info in cache
+              if (cached.teamSlug) {
+                group.teamSlug = cached.teamSlug;
+                group.teamName = cached.teamName;
+              }
             }
           } else {
             // Need to check via API
@@ -214,12 +244,31 @@ export function useNotifications(token: string | null) {
         const { group, notification } = reviewRequestsToCheck[i];
         const checkPromise = api
           .checkTeamReviewRequest(notification.subject.url, user.login)
-          .then((isTeam) => {
+          .then(async (isTeam) => {
             group.isTeamReviewRequest = isTeam;
-            teamCache.set(notification.id, isTeam);
-            if (isTeam) {
+
+            if (isTeam && userTeamSlugs.length > 0) {
+              // Check which team was requested
+              const teamInfo = await api.getRequestedTeamForPR(
+                notification.subject.url,
+                userTeamSlugs
+              );
+              if (teamInfo) {
+                group.teamSlug = teamInfo.slug;
+                group.teamName = teamInfo.name;
+                teamCache.set(
+                  notification.id,
+                  true,
+                  teamInfo.slug,
+                  teamInfo.name
+                );
+              } else {
+                teamCache.set(notification.id, true);
+              }
               // It's a team review, not prominent for the individual
               group.isProminentForMe = false;
+            } else {
+              teamCache.set(notification.id, false);
             }
           })
           .catch(() => {
@@ -454,6 +503,9 @@ export function useNotifications(token: string | null) {
       if (!user) {
         await fetchUser();
       }
+
+      // Fetch user teams
+      await fetchUserTeams();
 
       // Fetch notifications
       if (mounted) {

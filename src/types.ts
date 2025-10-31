@@ -65,6 +65,8 @@ export interface NotificationGroup {
   hasReply: boolean;
   hasTeamMention: boolean;
   isTeamReviewRequest: boolean;
+  teamSlug?: string;
+  teamName?: string;
 }
 
 export interface SubjectDetails {
@@ -76,4 +78,22 @@ export interface SubjectDetails {
   state?: string;
   title?: string;
   body?: string;
+}
+
+export interface GitHubTeam {
+  id: number;
+  node_id: string;
+  slug: string;
+  name: string;
+  description?: string;
+  organization: {
+    login: string;
+    id: number;
+    avatar_url: string;
+  };
+}
+
+export interface NotificationGroupWithTeam {
+  teamSlug?: string;
+  teamName?: string;
 }

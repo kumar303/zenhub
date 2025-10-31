@@ -1,5 +1,10 @@
 import { GITHUB_CONFIG } from "./config";
-import type { GitHubUser, GitHubNotification, SubjectDetails } from "./types";
+import type {
+  GitHubUser,
+  GitHubNotification,
+  SubjectDetails,
+  GitHubTeam,
+} from "./types";
 
 export class GitHubAPI {
   private token: string;
@@ -112,6 +117,41 @@ export class GitHubAPI {
     } catch (error) {
       console.error("Failed to check team review request:", error);
       return false;
+    }
+  }
+
+  async getUserTeams(): Promise<GitHubTeam[]> {
+    try {
+      const teams = await this.request<GitHubTeam[]>(
+        `${GITHUB_CONFIG.API_BASE}/user/teams`
+      );
+      return teams;
+    } catch (error) {
+      console.error("Failed to fetch user teams:", error);
+      return [];
+    }
+  }
+
+  async getRequestedTeamForPR(
+    prUrl: string,
+    userTeamSlugs: string[]
+  ): Promise<{ slug: string; name: string } | null> {
+    try {
+      const pr = await this.getPullRequestDetails(prUrl);
+      if (!pr || !pr.requested_teams || pr.requested_teams.length === 0) {
+        return null;
+      }
+
+      // Find which of the user's teams was requested for review
+      for (const team of pr.requested_teams) {
+        if (userTeamSlugs.includes(team.slug)) {
+          return { slug: team.slug, name: team.name };
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error("Failed to get requested team for PR:", error);
+      return null;
     }
   }
 }
