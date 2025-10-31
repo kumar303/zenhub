@@ -169,11 +169,41 @@ export class GitHubAPI {
       }
 
       // Find which of the user's teams was requested for review
+      console.log(
+        `Checking PR ${prUrl} requested teams:`,
+        pr.requested_teams.map((t: any) => t.slug)
+      );
+      console.log(`User teams:`, userTeamSlugs);
+
+      // Try exact match first
       for (const team of pr.requested_teams) {
         if (userTeamSlugs.includes(team.slug)) {
+          console.log(`Matched team: ${team.slug} - ${team.name}`);
           return { slug: team.slug, name: team.name };
         }
       }
+
+      // Try normalized match (convert hyphens to underscores and vice versa)
+      for (const team of pr.requested_teams) {
+        const normalizedSlug = team.slug.replace(/-/g, "_");
+        const normalizedSlug2 = team.slug.replace(/_/g, "-");
+
+        if (userTeamSlugs.includes(normalizedSlug)) {
+          console.log(
+            `Matched team (normalized): ${team.slug} -> ${normalizedSlug} - ${team.name}`
+          );
+          return { slug: normalizedSlug, name: team.name };
+        }
+
+        if (userTeamSlugs.includes(normalizedSlug2)) {
+          console.log(
+            `Matched team (normalized): ${team.slug} -> ${normalizedSlug2} - ${team.name}`
+          );
+          return { slug: normalizedSlug2, name: team.name };
+        }
+      }
+
+      console.log(`No team match found for PR ${prUrl}`);
       return null;
     } catch (error) {
       console.error("Failed to get requested team for PR:", error);

@@ -247,7 +247,9 @@ export function useNotifications(token: string | null) {
                   console.log(
                     `Could not find team for PR: ${
                       notification.subject.url
-                    }, user teams: ${userTeamSlugs.join(", ")}`
+                    }, user teams (${
+                      userTeamSlugs.length
+                    }): ${userTeamSlugs.join(", ")}`
                   );
                   group.teamSlug = "_team_review_requests";
                   group.teamName = "Team Review Requests";
