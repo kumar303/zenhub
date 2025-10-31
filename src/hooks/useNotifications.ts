@@ -34,48 +34,6 @@ export function useNotifications(token: string | null) {
 
   const api = token ? new GitHubAPI(token) : null;
 
-  const fetchUser = useCallback(async () => {
-    if (!api) return;
-
-    try {
-      const userData = await api.getUser();
-      setUser(userData);
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
-    } catch (err: any) {
-      console.error("Failed to fetch user:", err);
-      // If user fetch fails due to auth, don't crash the app
-      if (err.message === "UNAUTHORIZED") {
-        setError("Authentication expired. Please login again.");
-        // Don't reload immediately, let user see the error
-        setTimeout(() => {
-          localStorage.removeItem(STORAGE_KEYS.TOKEN);
-          localStorage.removeItem(STORAGE_KEYS.USER);
-          window.location.reload();
-        }, 2000);
-      }
-    }
-  }, [api]);
-
-  const fetchUserTeams = useCallback(async () => {
-    if (!api) return;
-
-    // Check cache first
-    const cachedTeams = teamsCache.get();
-    if (cachedTeams) {
-      setUserTeams(cachedTeams);
-      return;
-    }
-
-    try {
-      const teams = await api.getUserTeams();
-      setUserTeams(teams);
-      teamsCache.set(teams);
-    } catch (err: any) {
-      console.error("Failed to fetch user teams:", err);
-      // Don't crash if teams can't be fetched, just continue without team info
-    }
-  }, [api]);
-
   const processNotifications = useCallback(
     async (rawNotifications: GitHubNotification[]) => {
       if (!api || !user) return [];
@@ -585,19 +543,46 @@ export function useNotifications(token: string | null) {
     let mounted = true;
 
     const initializeData = async () => {
-      if (!mounted) return;
+      if (!mounted || !api) return;
 
-      // Fetch user if not already loaded
-      if (!user) {
-        await fetchUser();
-      }
+      try {
+        // Fetch user if not already loaded
+        if (!user) {
+          const userData = await api.getUser();
+          if (mounted) {
+            setUser(userData);
+            localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
+          }
+        }
 
-      // Fetch user teams
-      await fetchUserTeams();
+        // Fetch user teams
+        const cachedTeams = teamsCache.get();
+        if (cachedTeams) {
+          if (mounted) {
+            setUserTeams(cachedTeams);
+          }
+        } else {
+          try {
+            const teams = await api.getUserTeams();
+            if (mounted) {
+              setUserTeams(teams);
+              teamsCache.set(teams);
+            }
+          } catch (err) {
+            console.error("Failed to fetch user teams:", err);
+          }
+        }
 
-      // Fetch notifications
-      if (mounted) {
-        await fetchNotifications();
+        // Now fetch notifications
+        if (mounted) {
+          await fetchNotifications();
+        }
+      } catch (err: any) {
+        console.error("Initialization error:", err);
+        if (mounted) {
+          setError(err.message || "Failed to initialize");
+          setLoading(false);
+        }
       }
     };
 
@@ -621,8 +606,7 @@ export function useNotifications(token: string | null) {
         clearInterval(refreshInterval);
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]); // Only depend on token changes
+  }, [token, api, fetchNotifications]); // Include api and fetchNotifications
 
   // Request notification permissions
   useEffect(() => {
