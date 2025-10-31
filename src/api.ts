@@ -118,7 +118,16 @@ export class GitHubAPI {
 
       // If there are team reviewers but the user isn't personally requested,
       // this is likely a team review request
-      const isTeamRequest = hasTeamReviewers && !isPersonallyRequested;
+      // ALSO: If there are NO reviewers at all (neither team nor personal),
+      // but we have a review_requested notification, it's likely an orphaned
+      // team review request (where another team member already reviewed)
+      const noReviewersAtAll =
+        (!hasTeamReviewers || pr.requested_teams.length === 0) &&
+        (!pr.requested_reviewers || pr.requested_reviewers.length === 0);
+
+      const isTeamRequest =
+        (hasTeamReviewers && !isPersonallyRequested) ||
+        (noReviewersAtAll && !isPersonallyRequested);
 
       return { isTeamRequest, isDraft };
     } catch (error) {
