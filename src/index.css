@@ -63,3 +63,15 @@
 .animate-spin {
   animation: spin 1s linear infinite;
 }
+
+/* Header shadow extension */
+.header-shadow::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 10px;
+  background: white;
+  pointer-events: none;
+}

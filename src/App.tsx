@@ -41,17 +41,57 @@ export function App() {
     }
   }, [token]);
 
-  // Handle scroll events
+  // Handle scroll events with debouncing to prevent jitter
   useEffect(() => {
+    let rafId: number | null = null;
+    let timeoutId: NodeJS.Timeout | null = null;
+    let lastScrollY = 0;
+
     const handleScroll = () => {
-      const scrolled = window.scrollY > 20;
-      if (scrolled !== isScrolled) {
-        setIsScrolled(scrolled);
+      const currentScrollY = window.scrollY;
+
+      // Clear any pending animations/timeouts
+      if (rafId) {
+        cancelAnimationFrame(rafId);
       }
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+
+      // Only update if we've scrolled significantly or stopped scrolling
+      rafId = requestAnimationFrame(() => {
+        const scrollDelta = Math.abs(currentScrollY - lastScrollY);
+
+        // Immediate update for large scroll changes
+        if (scrollDelta > 10) {
+          const scrolled = currentScrollY > 40;
+          if (scrolled !== isScrolled) {
+            setIsScrolled(scrolled);
+          }
+          lastScrollY = currentScrollY;
+        } else {
+          // Debounced update for small scroll changes
+          timeoutId = setTimeout(() => {
+            const scrolled = window.scrollY > 40;
+            if (scrolled !== isScrolled) {
+              setIsScrolled(scrolled);
+            }
+            lastScrollY = window.scrollY;
+          }, 100);
+        }
+      });
     };
 
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [isScrolled]);
 
   const handleLogin = (newToken: string) => {
@@ -112,63 +152,64 @@ export function App() {
   return (
     <div className="min-h-screen">
       {/* Sticky header */}
-      <header
-        ref={headerRef}
-        className={`sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 transition-all duration-300 ${
-          isScrolled ? "py-2 shadow-md" : "py-4"
-        }`}
-      >
-        <div className="container mx-auto px-4 max-w-6xl">
-          <div className="flex items-center justify-between">
-            <h1
-              className={`font-bold gradient-olympic gradient-text transition-all duration-300 ${
-                isScrolled ? "text-2xl" : "text-4xl"
-              }`}
-            >
-              Zenhub
-            </h1>
-            <div className="flex items-center gap-4">
-              {user && (
-                <span className="text-gray-600 flex items-center gap-2">
-                  <img
-                    src={user.avatar_url}
-                    alt={user.login}
-                    className="w-8 h-8 rounded-full"
-                  />
-                  <span
-                    className={`transition-all duration-300 ${
-                      isScrolled ? "hidden sm:inline" : ""
-                    }`}
-                  >
-                    {user.login}
+      <header ref={headerRef} className="sticky top-0 z-50 bg-white">
+        <div
+          className={`relative border-b border-gray-200 transition-all duration-300 ${
+            isScrolled ? "py-2 shadow-md header-shadow" : "py-4"
+          }`}
+        >
+          <div className="container mx-auto px-4 max-w-6xl">
+            <div className="flex items-center justify-between">
+              <h1
+                className={`font-bold gradient-olympic gradient-text transition-all duration-300 ${
+                  isScrolled ? "text-2xl" : "text-4xl"
+                }`}
+              >
+                Zenhub
+              </h1>
+              <div className="flex items-center gap-4">
+                {user && (
+                  <span className="text-gray-600 flex items-center gap-2">
+                    <img
+                      src={user.avatar_url}
+                      alt={user.login}
+                      className="w-8 h-8 rounded-full"
+                    />
+                    <span
+                      className={`transition-all duration-300 ${
+                        isScrolled ? "hidden sm:inline" : ""
+                      }`}
+                    >
+                      {user.login}
+                    </span>
                   </span>
-                </span>
-              )}
-              <button
-                onClick={() => fetchNotifications()}
-                disabled={loading}
-                className={`gradient-blue-yellow text-white font-medium rounded-xl hover:shadow-lg transition-all duration-200 disabled:opacity-50 ${
-                  isScrolled ? "py-1.5 px-3 text-sm" : "py-2 px-4"
-                }`}
-              >
-                {loading ? "Refreshing..." : "Refresh"}
-              </button>
-              <button
-                onClick={handleLogout}
-                className={`bg-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-300 transition-all duration-200 ${
-                  isScrolled ? "py-1.5 px-3 text-sm" : "py-2 px-4"
-                }`}
-              >
-                Logout
-              </button>
+                )}
+                <button
+                  onClick={() => fetchNotifications()}
+                  disabled={loading}
+                  className={`gradient-blue-yellow text-white font-medium rounded-xl hover:shadow-lg transition-all duration-200 disabled:opacity-50 ${
+                    isScrolled ? "py-1.5 px-3 text-sm" : "py-2 px-4"
+                  }`}
+                >
+                  {loading ? "Refreshing..." : "Refresh"}
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className={`bg-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-300 transition-all duration-200 ${
+                    isScrolled ? "py-1.5 px-3 text-sm" : "py-2 px-4"
+                  }`}
+                >
+                  Logout
+                </button>
+              </div>
             </div>
-          </div>
 
-          {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl mt-2 animate-fade-in">
-              {error}
-            </div>
-          )}
+            {error && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl mt-2 animate-fade-in">
+                {error}
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -203,6 +244,7 @@ export function App() {
             count={reviewRequests.length}
             gradientClass="gradient-green-red gradient-text"
             defaultOpen={true}
+            isNavScrolled={isScrolled}
           >
             {reviewRequests.map((group) => (
               <NotificationGroup
@@ -224,6 +266,7 @@ export function App() {
             count={mentionsAndReplies.length}
             gradientClass="gradient-blue-yellow gradient-text"
             defaultOpen={true}
+            isNavScrolled={isScrolled}
           >
             {mentionsAndReplies.map((group) => (
               <NotificationGroup
@@ -245,6 +288,7 @@ export function App() {
             count={ownContent.length}
             gradientClass="gradient-purple-blue gradient-text"
             defaultOpen={false}
+            isNavScrolled={isScrolled}
           >
             {ownContent.map((group) => (
               <NotificationGroup
@@ -266,6 +310,7 @@ export function App() {
             count={needsAttention.length}
             gradientClass="gradient-olympic gradient-text"
             defaultOpen={true}
+            isNavScrolled={isScrolled}
           >
             {needsAttention.map((group) => (
               <NotificationGroup
@@ -287,6 +332,7 @@ export function App() {
             count={others.length}
             gradientClass="text-gray-700"
             defaultOpen={false}
+            isNavScrolled={isScrolled}
           >
             {others.map((group) => (
               <NotificationGroup
