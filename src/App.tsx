@@ -99,7 +99,7 @@ export function App() {
       <header className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-4xl font-bold gradient-olympic gradient-text">
-            GitHub Notifications
+            Zenhub
           </h1>
           <div className="flex items-center gap-4">
             {user && (
