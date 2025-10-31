@@ -45,6 +45,23 @@ class TeamCache {
   clear() {
     this.cache.clear();
   }
+
+  // Clear a specific notification from cache
+  clearNotification(notificationId: string) {
+    const cacheData = localStorage.getItem(TEAM_CACHE_KEY);
+    if (!cacheData) return;
+
+    try {
+      const cache = JSON.parse(cacheData);
+      if (cache.data && cache.data[notificationId]) {
+        delete cache.data[notificationId];
+        localStorage.setItem(TEAM_CACHE_KEY, JSON.stringify(cache));
+        console.log(`Cleared cache for notification: ${notificationId}`);
+      }
+    } catch (error) {
+      console.error("Error clearing cache entry:", error);
+    }
+  }
 }
 
 export const teamCache = new TeamCache();

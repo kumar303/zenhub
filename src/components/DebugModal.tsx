@@ -69,7 +69,7 @@ export function DebugModal({
         })(),
       })),
       localStorage: {
-        teamCacheKey: localStorage.getItem("github_team_cache_v2")
+        teamCacheKey: localStorage.getItem("github_team_cache_v3")
           ? "exists"
           : "empty",
         teamsCacheKey: localStorage.getItem("github_user_teams")
