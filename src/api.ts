@@ -96,7 +96,8 @@ export class GitHubAPI {
 
   async checkTeamReviewRequest(
     prUrl: string,
-    username: string
+    username: string,
+    reason?: string
   ): Promise<{ isTeamRequest: boolean; isDraft: boolean }> {
     try {
       const pr = await this.getPullRequestDetails(prUrl);
@@ -122,7 +123,7 @@ export class GitHubAPI {
       // but we have a review_requested notification, it's likely an orphaned
       // team review request (where another team member already reviewed)
       const noReviewersAtAll =
-        (!hasTeamReviewers || pr.requested_teams.length === 0) &&
+        (!pr.requested_teams || pr.requested_teams.length === 0) &&
         (!pr.requested_reviewers || pr.requested_reviewers.length === 0);
 
       const isTeamRequest =
@@ -130,24 +131,35 @@ export class GitHubAPI {
         (noReviewersAtAll && !isPersonallyRequested);
 
       // Enhanced debug logging for team review detection
-      console.log(`Checking team review for PR: ${prUrl}`);
-      console.log(`  hasTeamReviewers: ${hasTeamReviewers}`);
-      console.log(
-        `  requested_teams: ${pr.requested_teams?.length || 0}`,
-        pr.requested_teams?.map((t: any) => t.slug) || []
-      );
-      console.log(
-        `  requested_reviewers: ${pr.requested_reviewers?.length || 0}`,
-        pr.requested_reviewers?.map((r: any) => r.login) || []
-      );
-      console.log(
-        `  isPersonallyRequested: ${isPersonallyRequested} (username: ${username})`
-      );
-      console.log(`  noReviewersAtAll: ${noReviewersAtAll}`);
-      console.log(`  => isTeamRequest: ${isTeamRequest}`);
+      const debugMode =
+        typeof window !== "undefined" &&
+        localStorage.getItem("debug_team_reviews") === "true";
+      if (debugMode || noReviewersAtAll) {
+        console.log(`Checking team review for PR: ${prUrl}`);
+        console.log(`  PR title: "${pr.title}"`);
+        console.log(`  reason: ${reason}`);
+        console.log(`  hasTeamReviewers: ${hasTeamReviewers}`);
+        console.log(
+          `  requested_teams: ${pr.requested_teams?.length || 0}`,
+          pr.requested_teams?.map((t: any) => t.slug) || []
+        );
+        console.log(
+          `  requested_reviewers: ${pr.requested_reviewers?.length || 0}`,
+          pr.requested_reviewers?.map((r: any) => r.login) || []
+        );
+        console.log(
+          `  isPersonallyRequested: ${isPersonallyRequested} (username: ${username})`
+        );
+        console.log(`  noReviewersAtAll: ${noReviewersAtAll}`);
+        console.log(`  => isTeamRequest: ${isTeamRequest}`);
 
-      if (noReviewersAtAll && !isPersonallyRequested) {
-        console.log(`  ** This appears to be an orphaned team review **`);
+        if (
+          noReviewersAtAll &&
+          !isPersonallyRequested &&
+          reason === "review_requested"
+        ) {
+          console.log(`  ** This appears to be an orphaned team review **`);
+        }
       }
 
       return { isTeamRequest, isDraft };

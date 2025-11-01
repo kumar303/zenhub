@@ -198,6 +198,53 @@ location.reload();
     }
   };
 
+  const handleClearProblemCaches = () => {
+    try {
+      const data = JSON.parse(debugData);
+      if (
+        !data.problemNotifications ||
+        data.problemNotifications.length === 0
+      ) {
+        alert("No problem notifications found to clear.");
+        return;
+      }
+
+      const cacheKey = CACHE_KEYS.TEAM_CACHE;
+      const cacheData = localStorage.getItem(cacheKey);
+      if (!cacheData) {
+        alert("No cache found.");
+        return;
+      }
+
+      const cache = JSON.parse(cacheData);
+      let clearedCount = 0;
+
+      for (const problem of data.problemNotifications) {
+        if (cache.data && cache.data[problem.notificationId]) {
+          delete cache.data[problem.notificationId];
+          clearedCount++;
+          console.log(
+            `Cleared cache for: ${problem.title} (${problem.notificationId})`
+          );
+        }
+      }
+
+      localStorage.setItem(cacheKey, JSON.stringify(cache));
+
+      if (clearedCount > 0) {
+        alert(
+          `Cleared cache for ${clearedCount} notifications. Page will reload.`
+        );
+        location.reload();
+      } else {
+        alert("No cached entries found for problem notifications.");
+      }
+    } catch (err) {
+      console.error("Failed to clear caches:", err);
+      alert("Failed to clear caches. Check console for details.");
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
       <div className="bg-white rounded-xl max-w-4xl w-full max-h-[80vh] flex flex-col shadow-2xl">
@@ -227,19 +274,27 @@ location.reload();
             {debugData}
           </pre>
         </div>
-        <div className="p-4 border-t border-gray-200 flex gap-3 justify-end">
+        <div className="p-4 border-t border-gray-200 flex gap-3 justify-between">
           <button
-            onClick={handleCopy}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            onClick={handleClearProblemCaches}
+            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
           >
-            Copy to Clipboard
+            Clear Problem Caches
           </button>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-          >
-            Close
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={handleCopy}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              Copy to Clipboard
+            </button>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>

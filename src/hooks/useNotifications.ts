@@ -231,7 +231,11 @@ export function useNotifications(token: string | null) {
       for (let i = 0; i < reviewRequestsToCheck.length && i < 10; i++) {
         const { group, notification } = reviewRequestsToCheck[i];
         const checkPromise = api
-          .checkTeamReviewRequest(notification.subject.url, user.login)
+          .checkTeamReviewRequest(
+            notification.subject.url,
+            user.login,
+            notification.reason
+          )
           .then(async (result) => {
             group.isTeamReviewRequest = result.isTeamRequest;
             group.isDraftPR = result.isDraft;
