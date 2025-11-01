@@ -18,6 +18,43 @@ export function DebugModal({
   user,
 }: DebugModalProps) {
   const [debugData, setDebugData] = useState("");
+  const [capturedLogs, setCapturedLogs] = useState<string[]>([]);
+
+  // Capture console logs when modal is open
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const logs: string[] = [];
+    const originalLog = console.log;
+
+    // Override console.log temporarily
+    console.log = (...args) => {
+      const logMessage = args
+        .map((arg) =>
+          typeof arg === "object" ? JSON.stringify(arg, null, 2) : String(arg)
+        )
+        .join(" ");
+
+      // Only capture team review related logs
+      if (
+        logMessage.includes("team review") ||
+        logMessage.includes("Checking PR") ||
+        logMessage.includes("orphaned") ||
+        logMessage.includes("Cache check")
+      ) {
+        logs.push(logMessage);
+        setCapturedLogs((prev) => [...prev, logMessage]);
+      }
+
+      // Still call the original console.log
+      originalLog.apply(console, args);
+    };
+
+    // Restore original console.log when modal closes
+    return () => {
+      console.log = originalLog;
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -32,6 +69,55 @@ export function DebugModal({
         id: team.id,
       })),
       notificationsCount: notifications.length,
+      problemNotifications: (() => {
+        // Find notifications that might have team review issues
+        const problems = [];
+
+        // Check for notifications that are review_requested but not marked as team reviews
+        const suspiciousReviews = notifications.filter(
+          (g) =>
+            g.hasReviewRequest &&
+            !g.isTeamReviewRequest &&
+            g.notifications[0].reason === "review_requested"
+        );
+
+        for (const group of suspiciousReviews) {
+          const notifId = group.notifications[0].id;
+          const cacheData = localStorage.getItem(CACHE_KEYS.TEAM_CACHE);
+          let cacheInfo = null;
+
+          if (cacheData) {
+            try {
+              const cache = JSON.parse(cacheData);
+              if (cache.data && cache.data[notifId]) {
+                cacheInfo = cache.data[notifId];
+              }
+            } catch (e) {}
+          }
+
+          problems.push({
+            title: group.subject.title,
+            url: group.subject.url,
+            notificationId: notifId,
+            reason: group.notifications[0].reason,
+            hasReviewRequest: group.hasReviewRequest,
+            isTeamReviewRequest: group.isTeamReviewRequest,
+            cacheData: cacheInfo,
+            clearCacheScript: `
+// Clear cache for: ${group.subject.title}
+const notifId = "${notifId}";
+const cacheKey = "${CACHE_KEYS.TEAM_CACHE}";
+const cache = JSON.parse(localStorage.getItem(cacheKey));
+delete cache.data[notifId];
+localStorage.setItem(cacheKey, JSON.stringify(cache));
+console.log("Cleared cache for notification:", notifId);
+location.reload();
+            `.trim(),
+          });
+        }
+
+        return problems;
+      })(),
       notifications: notifications.map((group) => ({
         id: group.id,
         subject: {
@@ -76,10 +162,30 @@ export function DebugModal({
           ? "exists"
           : "empty",
       },
+      debugInstructions: {
+        forProblemNotifications: [
+          "1. Copy the clearCacheScript from the problemNotifications section",
+          "2. Open browser console (F12)",
+          "3. Paste and run the script",
+          "4. Page will reload automatically",
+          "5. Check console for 'Checking team review for PR:' logs",
+          "6. Run Debug again and share the new output",
+        ],
+        consoleCommands: {
+          clearAllTeamCache: `localStorage.removeItem("${CACHE_KEYS.TEAM_CACHE}"); location.reload();`,
+          showCurrentCache: `console.log(JSON.parse(localStorage.getItem("${CACHE_KEYS.TEAM_CACHE}")));`,
+          enableVerboseLogging: `localStorage.setItem("debug_team_reviews", "true"); location.reload();`,
+          disableVerboseLogging: `localStorage.removeItem("debug_team_reviews"); location.reload();`,
+        },
+      },
+      capturedConsoleLogs:
+        capturedLogs.length > 0
+          ? capturedLogs
+          : ["No team review logs captured yet. Try enabling verbose logging."],
     };
 
     setDebugData(JSON.stringify(data, null, 2));
-  }, [isOpen, notifications, userTeams, user]);
+  }, [isOpen, notifications, userTeams, user, capturedLogs]);
 
   if (!isOpen) return null;
 
