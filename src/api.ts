@@ -126,15 +126,27 @@ export class GitHubAPI {
         (!pr.requested_teams || pr.requested_teams.length === 0) &&
         (!pr.requested_reviewers || pr.requested_reviewers.length === 0);
 
+      // NEW: Check if this might be an orphaned team review
+      // If we have a review_requested notification but the user is NOT personally requested,
+      // and there's no team currently requested, this is likely a team review where
+      // another team member already reviewed
+      const hasOtherReviewersButNotUser =
+        !isPersonallyRequested &&
+        !hasTeamReviewers &&
+        pr.requested_reviewers &&
+        pr.requested_reviewers.length > 0 &&
+        reason === "review_requested";
+
       const isTeamRequest =
         (hasTeamReviewers && !isPersonallyRequested) ||
-        (noReviewersAtAll && !isPersonallyRequested);
+        (noReviewersAtAll && !isPersonallyRequested) ||
+        hasOtherReviewersButNotUser;
 
       // Enhanced debug logging for team review detection
       const debugMode =
         typeof window !== "undefined" &&
         localStorage.getItem("debug_team_reviews") === "true";
-      if (debugMode || noReviewersAtAll) {
+      if (debugMode || noReviewersAtAll || hasOtherReviewersButNotUser) {
         console.log(`Checking team review for PR: ${prUrl}`);
         console.log(`  PR title: "${pr.title}"`);
         console.log(`  reason: ${reason}`);
@@ -151,6 +163,7 @@ export class GitHubAPI {
           `  isPersonallyRequested: ${isPersonallyRequested} (username: ${username})`
         );
         console.log(`  noReviewersAtAll: ${noReviewersAtAll}`);
+        console.log(`  hasOtherReviewersButNotUser: ${hasOtherReviewersButNotUser}`);
         console.log(`  => isTeamRequest: ${isTeamRequest}`);
 
         if (
@@ -158,7 +171,10 @@ export class GitHubAPI {
           !isPersonallyRequested &&
           reason === "review_requested"
         ) {
-          console.log(`  ** This appears to be an orphaned team review **`);
+          console.log(`  ** This appears to be an orphaned team review (no reviewers) **`);
+        }
+        if (hasOtherReviewersButNotUser) {
+          console.log(`  ** This appears to be an orphaned team review (has other reviewers) **`);
         }
       }
 

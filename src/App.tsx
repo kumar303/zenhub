@@ -299,6 +299,7 @@ export function App() {
                             )
                           ) {
                             localStorage.removeItem(CACHE_KEYS.TEAM_CACHE);
+                            localStorage.removeItem(CACHE_KEYS.TEAM_CACHE_V3);
                             localStorage.removeItem(CACHE_KEYS.TEAM_CACHE_V2);
                             localStorage.removeItem(CACHE_KEYS.TEAM_CACHE_V1);
                             alert(
