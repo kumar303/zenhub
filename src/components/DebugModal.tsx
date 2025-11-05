@@ -1,4 +1,4 @@
-import { useState, useEffect } from "preact/hooks";
+import { useState, useEffect, useRef } from "preact/hooks";
 import type { NotificationGroup, GitHubTeam } from "../types";
 import { CACHE_KEYS } from "../config/cacheKeys";
 
@@ -19,6 +19,29 @@ export function DebugModal({
 }: DebugModalProps) {
   const [debugData, setDebugData] = useState("");
   const [capturedLogs, setCapturedLogs] = useState<string[]>([]);
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Handle click outside for menu
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    }
+    if (showMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showMenu]);
+
+  // Reset menu when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setShowMenu(false);
+    }
+  }, [isOpen]);
 
   // Capture console logs when modal is open
   useEffect(() => {
@@ -73,12 +96,14 @@ export function DebugModal({
         // Find notifications that might have team review issues
         const problems = [];
 
-        // Check for notifications that are review_requested but not marked as team reviews
+        // Check for notifications that might have team review issues
         const suspiciousReviews = notifications.filter(
           (g) =>
-            g.hasReviewRequest &&
-            !g.isTeamReviewRequest &&
-            g.notifications[0].reason === "review_requested"
+            (g.hasReviewRequest &&
+              !g.isTeamReviewRequest &&
+              g.notifications[0].reason === "review_requested") ||
+            // Also include team reviews with generic fallback
+            (g.isTeamReviewRequest && g.teamSlug === "_team_review_requests")
         );
 
         for (const group of suspiciousReviews) {
@@ -102,15 +127,21 @@ export function DebugModal({
             reason: group.notifications[0].reason,
             hasReviewRequest: group.hasReviewRequest,
             isTeamReviewRequest: group.isTeamReviewRequest,
+            teamSlug: group.teamSlug,
+            teamName: group.teamName,
             cacheData: cacheInfo,
             clearCacheScript: `
 // Clear cache for: ${group.subject.title}
 const notifId = "${notifId}";
 const cacheKey = "${CACHE_KEYS.TEAM_CACHE}";
-const cache = JSON.parse(localStorage.getItem(cacheKey));
-delete cache.data[notifId];
-localStorage.setItem(cacheKey, JSON.stringify(cache));
-console.log("Cleared cache for notification:", notifId);
+const cache = JSON.parse(localStorage.getItem(cacheKey) || '{"data":{}}');
+if (cache.data && cache.data[notifId]) {
+  delete cache.data[notifId];
+  localStorage.setItem(cacheKey, JSON.stringify(cache));
+  console.log("Cleared cache for notification:", notifId);
+} else {
+  console.log("No cache found for notification:", notifId);
+}
 location.reload();
             `.trim(),
           });
@@ -290,26 +321,150 @@ location.reload();
             {debugData}
           </pre>
         </div>
-        <div className="p-4 border-t border-gray-200 flex gap-3 justify-between">
+        <div className="p-4 border-t border-gray-200 flex gap-3 justify-end">
           <button
-            onClick={handleClearProblemCaches}
-            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+            onClick={handleCopy}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
           >
-            Clear Problem Caches
+            Copy to Clipboard
           </button>
-          <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+          >
+            Close
+          </button>
+          <div className="relative" ref={menuRef}>
             <button
-              onClick={handleCopy}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              onClick={() => setShowMenu(!showMenu)}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
+              title="Actions menu"
             >
-              Copy to Clipboard
+              <span>Actions</span>
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+                />
+              </svg>
             </button>
-            <button
-              onClick={onClose}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-            >
-              Close
-            </button>
+
+            {showMenu && (
+              <div className="absolute bottom-full right-0 mb-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                {debugData &&
+                  (() => {
+                    try {
+                      const data = JSON.parse(debugData);
+                      if (
+                        data.problemNotifications &&
+                        data.problemNotifications.length > 0
+                      ) {
+                        return (
+                          <>
+                            <div className="px-4 py-2 text-sm font-semibold text-gray-500 border-b border-gray-200">
+                              Clear Problem Caches
+                            </div>
+                            {data.problemNotifications.map(
+                              (problem: any, index: number) => (
+                                <button
+                                  key={index}
+                                  onClick={() => {
+                                    const cacheKey = CACHE_KEYS.TEAM_CACHE;
+                                    const cache = JSON.parse(
+                                      localStorage.getItem(cacheKey) ||
+                                        '{"data":{}}'
+                                    );
+                                    if (
+                                      cache.data &&
+                                      cache.data[problem.notificationId]
+                                    ) {
+                                      delete cache.data[problem.notificationId];
+                                      localStorage.setItem(
+                                        cacheKey,
+                                        JSON.stringify(cache)
+                                      );
+                                      console.log(
+                                        `Cleared cache for: ${problem.title}`
+                                      );
+                                      location.reload();
+                                    } else {
+                                      alert(
+                                        `No cache found for: ${problem.title}`
+                                      );
+                                    }
+                                  }}
+                                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
+                                >
+                                  Clear: {problem.title.substring(0, 40)}...
+                                </button>
+                              )
+                            )}
+                            <div className="border-b border-gray-200 my-1"></div>
+                          </>
+                        );
+                      }
+                      return null;
+                    } catch (e) {
+                      return null;
+                    }
+                  })()}
+
+                <button
+                  onClick={handleClearProblemCaches}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
+                >
+                  Clear All Problem Caches
+                </button>
+                <button
+                  onClick={() => {
+                    localStorage.removeItem(CACHE_KEYS.TEAM_CACHE);
+                    localStorage.removeItem(CACHE_KEYS.TEAM_CACHE_V3);
+                    alert("Team cache cleared. Page will reload.");
+                    location.reload();
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
+                >
+                  Clear All Team Cache
+                </button>
+                <button
+                  onClick={() => {
+                    localStorage.removeItem("dismissed_notifications");
+                    alert("Dismissed notifications cleared. Page will reload.");
+                    location.reload();
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
+                >
+                  Clear Dismissed Notifications
+                </button>
+                <button
+                  onClick={() => {
+                    localStorage.setItem("debug_team_reviews", "true");
+                    alert("Verbose logging enabled. Page will reload.");
+                    location.reload();
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
+                >
+                  Enable Verbose Logging
+                </button>
+                <button
+                  onClick={() => {
+                    localStorage.removeItem("debug_team_reviews");
+                    alert("Verbose logging disabled. Page will reload.");
+                    location.reload();
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
+                >
+                  Disable Verbose Logging
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
