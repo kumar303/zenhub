@@ -395,11 +395,10 @@ export function useNotifications(token: string | null) {
           "team_mention", // Team mentions
         ]);
 
-        // Filter notifications: only allowed reasons and not dismissed
+        // Filter notifications: only allowed reasons
         // We're already using participating=true at API level to reduce initial results
         const filtered = allNotifications.filter(
           (n) =>
-            !dismissed.includes(n.id) &&
             (allowedReasons.has(n.reason) || n.subject.type === "CheckSuite") && // Include CheckSuite notifications
             // Exclude comment notifications on threads you authored (likely your own comments)
             !(
@@ -415,19 +414,30 @@ export function useNotifications(token: string | null) {
         // Process and group notifications
         const processed = await processNotifications(filtered);
 
+        // Filter out dismissed groups AFTER grouping
+        // This ensures groups stay dismissed even if their individual notifications change
+        const nonDismissedGroups = processed.filter(
+          (group) => !dismissed.includes(group.id)
+        );
+
         if (append && page > 1) {
           // Merge with existing notifications, avoiding duplicates
           const existingIds = new Set(notifications.map((g) => g.id));
-          const newGroups = processed.filter((g) => !existingIds.has(g.id));
+          const newGroups = nonDismissedGroups.filter(
+            (g) => !existingIds.has(g.id)
+          );
           setNotifications([...notifications, ...newGroups]);
         } else {
-          setNotifications(processed);
+          setNotifications(nonDismissedGroups);
         }
 
         // Check for new prominent notifications
         // Skip web notifications on initial page load and manual loads (Load More)
         const skipNotifications = isFirstSessionLoad || isManualLoad;
-        checkForNewProminentNotifications(processed, skipNotifications);
+        checkForNewProminentNotifications(
+          nonDismissedGroups,
+          skipNotifications
+        );
 
         // Mark initial load as complete
         if (initialLoad) {
@@ -547,8 +557,9 @@ export function useNotifications(token: string | null) {
     (groupId: string) => {
       const group = notifications.find((g) => g.id === groupId);
       if (group) {
-        const notificationIds = group.notifications.map((n) => n.id);
-        const newDismissed = [...dismissed, ...notificationIds];
+        // Store the group ID instead of individual notification IDs
+        // This ensures the group stays dismissed even if individual notifications change
+        const newDismissed = [...dismissed, groupId];
         setDismissed(newDismissed);
         localStorage.setItem(
           STORAGE_KEYS.DISMISSED,
@@ -679,11 +690,17 @@ export function useNotifications(token: string | null) {
 
       // Process all notifications at once
       const processed = await processNotifications(allNotifications);
-      setNotifications(processed);
+
+      // Filter out dismissed groups
+      const nonDismissedGroups = processed.filter(
+        (group) => !dismissed.includes(group.id)
+      );
+
+      setNotifications(nonDismissedGroups);
 
       // Identify which notifications are truly new (not present before refresh)
       const newNotificationIds = new Set<string>();
-      for (const group of processed) {
+      for (const group of nonDismissedGroups) {
         for (const notification of group.notifications) {
           if (!existingNotificationIds.has(notification.id)) {
             newNotificationIds.add(notification.id);
@@ -692,7 +709,11 @@ export function useNotifications(token: string | null) {
       }
 
       // Check for new prominent notifications, passing the set of new IDs
-      checkForNewProminentNotifications(processed, false, newNotificationIds);
+      checkForNewProminentNotifications(
+        nonDismissedGroups,
+        false,
+        newNotificationIds
+      );
     } catch (err: any) {
       if (err.message === "UNAUTHORIZED") {
         setError("Authentication expired. Please login again.");
@@ -710,6 +731,7 @@ export function useNotifications(token: string | null) {
     currentPage,
     processNotifications,
     checkForNewProminentNotifications,
+    dismissed,
     notifications,
   ]);
 
