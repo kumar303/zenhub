@@ -463,6 +463,29 @@ location.reload();
                 >
                   Disable Verbose Logging
                 </button>
+                <div className="border-b border-gray-200 my-1"></div>
+                <button
+                  onClick={() => {
+                    // Get the token to preserve it
+                    const token = localStorage.getItem("github_token");
+
+                    // Clear all localStorage
+                    localStorage.clear();
+
+                    // Restore the token
+                    if (token) {
+                      localStorage.setItem("github_token", token);
+                    }
+
+                    alert(
+                      "All caches cleared (token preserved). Page will reload."
+                    );
+                    location.reload();
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700 text-red-600 font-semibold"
+                >
+                  Clear All Caches (Keep Login)
+                </button>
               </div>
             )}
           </div>
