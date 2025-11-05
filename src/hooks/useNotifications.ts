@@ -26,7 +26,30 @@ export function useNotifications(token: string | null) {
   const [error, setError] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState<string[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.DISMISSED);
-    return saved ? JSON.parse(saved) : [];
+    if (!saved) return [];
+
+    try {
+      const parsed = JSON.parse(saved);
+
+      // Migration: Check if we have old numeric notification IDs
+      // New group IDs contain '#' (e.g., "repo/name#https://api.github.com/...")
+      const hasOldIds = parsed.some(
+        (id: any) => typeof id === "string" && /^\d+$/.test(id)
+      );
+
+      if (hasOldIds) {
+        // Clear old dismissed IDs since we can't reliably convert them to group IDs
+        // The user will need to dismiss notifications again, but they'll stay dismissed properly
+        console.log("Migrating dismissed notifications to new format");
+        localStorage.removeItem(STORAGE_KEYS.DISMISSED);
+        return [];
+      }
+
+      return parsed;
+    } catch (e) {
+      console.error("Failed to parse dismissed notifications:", e);
+      return [];
+    }
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);

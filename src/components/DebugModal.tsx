@@ -161,6 +161,20 @@ location.reload();
         teamsCacheKey: localStorage.getItem(CACHE_KEYS.USER_TEAMS)
           ? "exists"
           : "empty",
+        dismissedNotifications: (() => {
+          const dismissed = localStorage.getItem("dismissed_notifications");
+          if (!dismissed) return "none";
+          try {
+            const parsed = JSON.parse(dismissed);
+            return {
+              count: parsed.length,
+              sample: parsed.slice(0, 5),
+              hasNumericIds: parsed.some((id: any) => /^\d+$/.test(id)),
+            };
+          } catch (e) {
+            return "invalid";
+          }
+        })(),
       },
       debugInstructions: {
         forProblemNotifications: [
@@ -176,6 +190,8 @@ location.reload();
           showCurrentCache: `console.log(JSON.parse(localStorage.getItem("${CACHE_KEYS.TEAM_CACHE}")));`,
           enableVerboseLogging: `localStorage.setItem("debug_team_reviews", "true"); location.reload();`,
           disableVerboseLogging: `localStorage.removeItem("debug_team_reviews"); location.reload();`,
+          clearDismissedNotifications: `localStorage.removeItem("dismissed_notifications"); location.reload();`,
+          showDismissedNotifications: `console.log(JSON.parse(localStorage.getItem("dismissed_notifications") || "[]"));`,
         },
       },
       capturedConsoleLogs:
