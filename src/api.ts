@@ -163,7 +163,9 @@ export class GitHubAPI {
           `  isPersonallyRequested: ${isPersonallyRequested} (username: ${username})`
         );
         console.log(`  noReviewersAtAll: ${noReviewersAtAll}`);
-        console.log(`  hasOtherReviewersButNotUser: ${hasOtherReviewersButNotUser}`);
+        console.log(
+          `  hasOtherReviewersButNotUser: ${hasOtherReviewersButNotUser}`
+        );
         console.log(`  => isTeamRequest: ${isTeamRequest}`);
 
         if (
@@ -171,10 +173,14 @@ export class GitHubAPI {
           !isPersonallyRequested &&
           reason === "review_requested"
         ) {
-          console.log(`  ** This appears to be an orphaned team review (no reviewers) **`);
+          console.log(
+            `  ** This appears to be an orphaned team review (no reviewers) **`
+          );
         }
         if (hasOtherReviewersButNotUser) {
-          console.log(`  ** This appears to be an orphaned team review (has other reviewers) **`);
+          console.log(
+            `  ** This appears to be an orphaned team review (has other reviewers) **`
+          );
         }
       }
 
@@ -203,21 +209,31 @@ export class GitHubAPI {
   ): Promise<{ slug: string; name: string } | null> {
     try {
       const pr = await this.getPullRequestDetails(prUrl);
+
+      console.log(`\n=== getRequestedTeamForPR Debug ===`);
+      console.log(`PR URL: ${prUrl}`);
+      console.log(`PR Title: ${pr?.title}`);
+      console.log(`PR has requested_teams: ${!!pr?.requested_teams}`);
+      console.log(`Requested teams count: ${pr?.requested_teams?.length || 0}`);
+
       if (!pr || !pr.requested_teams || pr.requested_teams.length === 0) {
+        console.log(`Early return: No PR or no requested teams`);
         return null;
       }
 
       // Find which of the user's teams was requested for review
       console.log(
-        `Checking PR ${prUrl} requested teams:`,
-        pr.requested_teams.map((t: any) => t.slug)
+        `Requested teams:`,
+        pr.requested_teams.map((t: any) => ({ slug: t.slug, name: t.name }))
       );
-      console.log(`User teams:`, userTeamSlugs);
+      console.log(`User teams (${userTeamSlugs.length}):`, userTeamSlugs);
 
       // Try exact match first
       for (const team of pr.requested_teams) {
+        console.log(`  Checking exact match: "${team.slug}" in user teams`);
         if (userTeamSlugs.includes(team.slug)) {
-          console.log(`Matched team: ${team.slug} - ${team.name}`);
+          console.log(`  ✓ Matched team: ${team.slug} - ${team.name}`);
+          console.log(`=== End getRequestedTeamForPR Debug ===\n`);
           return { slug: team.slug, name: team.name };
         }
       }
@@ -227,25 +243,33 @@ export class GitHubAPI {
         const normalizedSlug = team.slug.replace(/-/g, "_");
         const normalizedSlug2 = team.slug.replace(/_/g, "-");
 
+        console.log(
+          `  Checking normalized: "${team.slug}" -> "${normalizedSlug}" or "${normalizedSlug2}"`
+        );
+
         if (userTeamSlugs.includes(normalizedSlug)) {
           console.log(
-            `Matched team (normalized): ${team.slug} -> ${normalizedSlug} - ${team.name}`
+            `  ✓ Matched team (normalized): ${team.slug} -> ${normalizedSlug} - ${team.name}`
           );
+          console.log(`=== End getRequestedTeamForPR Debug ===\n`);
           return { slug: normalizedSlug, name: team.name };
         }
 
         if (userTeamSlugs.includes(normalizedSlug2)) {
           console.log(
-            `Matched team (normalized): ${team.slug} -> ${normalizedSlug2} - ${team.name}`
+            `  ✓ Matched team (normalized): ${team.slug} -> ${normalizedSlug2} - ${team.name}`
           );
+          console.log(`=== End getRequestedTeamForPR Debug ===\n`);
           return { slug: normalizedSlug2, name: team.name };
         }
       }
 
       console.log(`No team match found for PR ${prUrl}`);
+      console.log(`=== End getRequestedTeamForPR Debug ===\n`);
       return null;
     } catch (error) {
       console.error("Failed to get requested team for PR:", error);
+      console.log(`=== End getRequestedTeamForPR Debug (with error) ===\n`);
       return null;
     }
   }

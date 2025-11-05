@@ -1,9 +1,10 @@
 // Central location for all cache keys to ensure consistency
 export const CACHE_KEYS = {
   // Team cache for storing team review request information
-  TEAM_CACHE: "github_team_cache_v4", // v4 includes improved orphaned team review logic for PRs with other reviewers
+  TEAM_CACHE: "github_team_cache_v5", // v5 includes enhanced debug logging
 
   // Previous versions (for cleanup)
+  TEAM_CACHE_V4: "github_team_cache_v4",
   TEAM_CACHE_V3: "github_team_cache_v3",
   TEAM_CACHE_V2: "github_team_cache_v2",
   TEAM_CACHE_V1: "github_team_cache",

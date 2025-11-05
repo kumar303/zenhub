@@ -7,7 +7,7 @@ import { useNotifications } from "./hooks/useNotifications";
 import { useClickedNotifications } from "./hooks/useClickedNotifications";
 import { STORAGE_KEYS } from "./config";
 import { getSubjectUrl } from "./utils/url";
-import { CACHE_KEYS } from "./config/cacheKeys";
+import { clearAllTeamCache } from "./utils/clearCache";
 
 export function App() {
   const [token, setToken] = useState<string | null>(() =>
@@ -298,10 +298,7 @@ export function App() {
                               "Clear all team review cache? This will force fresh API checks."
                             )
                           ) {
-                            localStorage.removeItem(CACHE_KEYS.TEAM_CACHE);
-                            localStorage.removeItem(CACHE_KEYS.TEAM_CACHE_V3);
-                            localStorage.removeItem(CACHE_KEYS.TEAM_CACHE_V2);
-                            localStorage.removeItem(CACHE_KEYS.TEAM_CACHE_V1);
+                            clearAllTeamCache();
                             alert(
                               "Cache cleared! Refresh the page to see changes."
                             );

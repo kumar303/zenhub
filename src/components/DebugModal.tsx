@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "preact/hooks";
 import type { NotificationGroup, GitHubTeam } from "../types";
 import { CACHE_KEYS } from "../config/cacheKeys";
+import { clearAllTeamCache } from "../utils/clearCache";
 
 interface DebugModalProps {
   isOpen: boolean;
@@ -217,7 +218,7 @@ location.reload();
           "6. Run Debug again and share the new output",
         ],
         consoleCommands: {
-          clearAllTeamCache: `localStorage.removeItem("${CACHE_KEYS.TEAM_CACHE}"); localStorage.removeItem("${CACHE_KEYS.TEAM_CACHE_V3}"); location.reload();`,
+          clearAllTeamCache: `localStorage.removeItem("${CACHE_KEYS.TEAM_CACHE}"); localStorage.removeItem("${CACHE_KEYS.TEAM_CACHE_V4}"); localStorage.removeItem("${CACHE_KEYS.TEAM_CACHE_V3}"); localStorage.removeItem("${CACHE_KEYS.TEAM_CACHE_V2}"); localStorage.removeItem("${CACHE_KEYS.TEAM_CACHE_V1}"); location.reload();`,
           showCurrentCache: `console.log(JSON.parse(localStorage.getItem("${CACHE_KEYS.TEAM_CACHE}")));`,
           enableVerboseLogging: `localStorage.setItem("debug_team_reviews", "true"); location.reload();`,
           disableVerboseLogging: `localStorage.removeItem("debug_team_reviews"); location.reload();`,
@@ -424,8 +425,7 @@ location.reload();
                 </button>
                 <button
                   onClick={() => {
-                    localStorage.removeItem(CACHE_KEYS.TEAM_CACHE);
-                    localStorage.removeItem(CACHE_KEYS.TEAM_CACHE_V3);
+                    clearAllTeamCache();
                     alert("Team cache cleared. Page will reload.");
                     location.reload();
                   }}
