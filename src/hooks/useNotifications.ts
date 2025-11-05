@@ -45,7 +45,28 @@ export function useNotifications(token: string | null) {
         return [];
       }
 
-      return parsed;
+      // Remove any duplicates and return as array
+      const uniqueDismissed = Array.from(new Set<string>(parsed));
+
+      // If we had duplicates, update localStorage
+      if (uniqueDismissed.length < parsed.length) {
+        console.log(
+          `Removed ${
+            parsed.length - uniqueDismissed.length
+          } duplicate dismissed notifications`
+        );
+        localStorage.setItem(
+          STORAGE_KEYS.DISMISSED,
+          JSON.stringify(uniqueDismissed)
+        );
+      }
+
+      console.log(
+        `[Init] Loaded ${uniqueDismissed.length} dismissed notifications from localStorage:`,
+        uniqueDismissed
+      );
+
+      return uniqueDismissed;
     } catch (e) {
       console.error("Failed to parse dismissed notifications:", e);
       return [];
@@ -358,6 +379,19 @@ export function useNotifications(token: string | null) {
         return bTime - aTime;
       });
 
+      // Log group IDs for debugging
+      if (groupedArray.length > 0) {
+        const debugGroupInfo = groupedArray.slice(0, 5).map((g) => ({
+          id: g.id,
+          title: g.subject.title,
+          repo: g.repository.full_name,
+        }));
+        console.log(
+          `[ProcessNotifications] Generated ${groupedArray.length} groups (showing first 5):`,
+          debugGroupInfo
+        );
+      }
+
       return groupedArray;
     },
     [api, user, userTeams]
@@ -437,10 +471,24 @@ export function useNotifications(token: string | null) {
         // Process and group notifications
         const processed = await processNotifications(filtered);
 
+        console.log(
+          `[FetchNotifications] Processed ${processed.length} groups, dismissed list has ${dismissed.length} items`
+        );
+
         // Filter out dismissed groups AFTER grouping
         // This ensures groups stay dismissed even if their individual notifications change
-        const nonDismissedGroups = processed.filter(
-          (group) => !dismissed.includes(group.id)
+        const nonDismissedGroups = processed.filter((group) => {
+          const isDismissed = dismissed.includes(group.id);
+          if (isDismissed) {
+            console.log(
+              `Filtering out dismissed notification: ${group.subject.title} (${group.id})`
+            );
+          }
+          return !isDismissed;
+        });
+
+        console.log(
+          `[FetchNotifications] After filtering dismissed: ${nonDismissedGroups.length} groups remain`
         );
 
         if (append && page > 1) {
@@ -582,7 +630,11 @@ export function useNotifications(token: string | null) {
       if (group) {
         // Store the group ID instead of individual notification IDs
         // This ensures the group stays dismissed even if individual notifications change
-        const newDismissed = [...dismissed, groupId];
+        // Use a Set to prevent duplicates
+        const dismissedSet = new Set(dismissed);
+        dismissedSet.add(groupId);
+        const newDismissed = Array.from(dismissedSet);
+
         setDismissed(newDismissed);
         localStorage.setItem(
           STORAGE_KEYS.DISMISSED,
@@ -591,6 +643,14 @@ export function useNotifications(token: string | null) {
 
         // Remove from current notifications
         setNotifications(notifications.filter((g) => g.id !== groupId));
+
+        console.log(
+          `Dismissed notification: ${group.subject.title} (${groupId})`
+        );
+        console.log(`Updated dismissed list:`, newDismissed);
+        console.log(
+          `Dismissed list saved to localStorage with ${newDismissed.length} items`
+        );
       }
     },
     [notifications, dismissed]
@@ -715,9 +775,15 @@ export function useNotifications(token: string | null) {
       const processed = await processNotifications(allNotifications);
 
       // Filter out dismissed groups
-      const nonDismissedGroups = processed.filter(
-        (group) => !dismissed.includes(group.id)
-      );
+      const nonDismissedGroups = processed.filter((group) => {
+        const isDismissed = dismissed.includes(group.id);
+        if (isDismissed) {
+          console.log(
+            `[Refresh] Filtering out dismissed notification: ${group.subject.title} (${group.id})`
+          );
+        }
+        return !isDismissed;
+      });
 
       setNotifications(nonDismissedGroups);
 
