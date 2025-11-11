@@ -592,6 +592,19 @@ export function useNotifications(token: string | null) {
         if (!sessionStorage.getItem(key) && hasNewNotification) {
           sessionStorage.setItem(key, "true");
 
+          console.log(
+            `[WebNotification] Triggering notification for: ${group.subject.title} (${group.id})`
+          );
+          console.log(
+            `  Type: ${group.subject.type}, Prominent: ${group.isProminentForMe}`
+          );
+          console.log(
+            `  New notification IDs in group:`,
+            group.notifications
+              .filter((n) => newNotificationIds?.has(n.id))
+              .map((n) => n.id)
+          );
+
           let title = `${group.subject.title}`;
           let body = `${group.repository.full_name}`;
 
@@ -754,9 +767,19 @@ export function useNotifications(token: string | null) {
     setError(null);
 
     // Store current notification IDs to identify new ones
+    // Note: We need to track ALL notification IDs we've seen, not just the ones we display
+    // This prevents closed/merged issues from triggering web notifications
     const existingNotificationIds = new Set(
       notifications.flatMap((group) => group.notifications.map((n) => n.id))
     );
+
+    // Also add any notification IDs we've previously notified about
+    // to prevent re-notifying for closed/merged items
+    const previouslyNotifiedKey = "previously_notified_ids";
+    const previouslyNotified = JSON.parse(
+      sessionStorage.getItem(previouslyNotifiedKey) || "[]"
+    );
+    previouslyNotified.forEach((id: string) => existingNotificationIds.add(id));
 
     try {
       // Fetch all pages up to current page
@@ -797,12 +820,37 @@ export function useNotifications(token: string | null) {
         }
       }
 
+      // Log if we find any closed/merged items that would have triggered notifications
+      const allProcessedGroups = await processNotifications(allNotifications);
+      for (const group of allProcessedGroups) {
+        if (group.isProminentForMe) {
+          // Check if this was filtered out for being closed/merged
+          const isInDisplayed = nonDismissedGroups.some(
+            (g) => g.id === group.id
+          );
+          if (!isInDisplayed) {
+            console.log(
+              `[Refresh] Filtered prominent notification (likely closed/merged): ${group.subject.title}`
+            );
+          }
+        }
+      }
+
       // Check for new prominent notifications, passing the set of new IDs
       checkForNewProminentNotifications(
         nonDismissedGroups,
         false,
         newNotificationIds
       );
+
+      // Save all notification IDs we've seen to prevent re-notifying for closed/merged items
+      const allSeenIds = Array.from(existingNotificationIds);
+      for (const notification of allNotifications) {
+        allSeenIds.push(notification.id);
+      }
+      // Keep only the last 1000 IDs to prevent unbounded growth
+      const recentIds = allSeenIds.slice(-1000);
+      sessionStorage.setItem(previouslyNotifiedKey, JSON.stringify(recentIds));
     } catch (err: any) {
       if (err.message === "UNAUTHORIZED") {
         setError("Authentication expired. Please login again.");
