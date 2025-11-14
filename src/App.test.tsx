@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/preact";
 import { App } from "./App";
-import type { NotificationGroup, GitHubUser, GitHubTeam } from "./types";
+import type {
+  GitHubUser,
+  GitHubTeam,
+  GitHubRepository,
+  NotificationGroup,
+} from "./types";
 
 // Mock modules
 vi.mock("./hooks/useNotifications");
@@ -35,19 +40,21 @@ const mockUserTeams: GitHubTeam[] = [
   },
 ];
 
-// Helper to create a notification group with common defaults
+const mockRepository: GitHubRepository = {
+  id: 1,
+  name: "test-repo",
+  full_name: "test/test-repo",
+  owner: mockUser,
+  html_url: "https://github.com/test/test-repo",
+};
+
+// Helper to create NotificationGroup with sensible defaults
 const createNotificationGroup = (
   overrides: Partial<NotificationGroup>
 ): NotificationGroup => {
   const defaults: NotificationGroup = {
     id: "default-id",
-    repository: {
-      id: 1,
-      name: "test-repo",
-      full_name: "test/test-repo",
-      owner: mockUser,
-      html_url: "https://github.com/test/test-repo",
-    },
+    repository: mockRepository,
     subject: {
       title: "Test notification",
       url: "https://api.github.com/repos/test/test-repo/pulls/1",
@@ -64,13 +71,7 @@ const createNotificationGroup = (
           url: "https://api.github.com/repos/test/test-repo/pulls/1",
           type: "PullRequest",
         },
-        repository: {
-          id: 1,
-          name: "test-repo",
-          full_name: "test/test-repo",
-          owner: mockUser,
-          html_url: "https://github.com/test/test-repo",
-        },
+        repository: mockRepository,
         url: "https://api.github.com/notifications/threads/notif-1",
         subscription_url:
           "https://api.github.com/notifications/threads/notif-1/subscription",
@@ -94,7 +95,7 @@ describe("<App>", () => {
     // Reset mocks
     vi.clearAllMocks();
 
-    // Setup localStorage with proper token key
+    // Setup localStorage with proper token key and clear caches
     (global.localStorage as any)._setStore({
       github_token: "test-token",
     });
@@ -107,7 +108,7 @@ describe("<App>", () => {
   });
 
   it("should render notifications with a direct author review request as Review Requests", () => {
-    // Setup: Create notifications with direct review requests
+    // Setup: Create notifications with hasReviewRequest=true, isTeamReviewRequest=false
     const directReviewRequest1 = createNotificationGroup({
       id: "repo1#url1",
       subject: {
@@ -130,23 +131,25 @@ describe("<App>", () => {
       isTeamReviewRequest: false,
     });
 
-    // Setup: Create a notification WITHOUT direct review request (should not appear)
+    // Setup: Create a notification that should NOT appear in Review Requests
     const ownContentNotification = createNotificationGroup({
       id: "repo3#url3",
-      subject: { title: "Your own issue", url: "url3", type: "Issue" },
+      subject: {
+        title: "Your own issue",
+        url: "url3",
+        type: "Issue",
+      },
       hasReviewRequest: false,
       isTeamReviewRequest: false,
       isOwnContent: true,
     });
 
-    const mockNotifications = [
-      directReviewRequest1,
-      directReviewRequest2,
-      ownContentNotification,
-    ];
-
     vi.mocked(useNotifications).mockReturnValue({
-      notifications: mockNotifications,
+      notifications: [
+        directReviewRequest1,
+        directReviewRequest2,
+        ownContentNotification,
+      ],
       user: mockUser,
       userTeams: mockUserTeams,
       loading: false,
@@ -163,8 +166,6 @@ describe("<App>", () => {
     render(<App />);
 
     const allReviewHeaders = screen.queryAllByText(/Review Requests/);
-    expect(allReviewHeaders.length).toBeGreaterThanOrEqual(1);
-
     const reviewRequestsSection = allReviewHeaders.find(
       (el) =>
         el.textContent?.trim().startsWith("Review Requests") &&
@@ -173,18 +174,10 @@ describe("<App>", () => {
     expect(reviewRequestsSection).toBeDefined();
     expect(reviewRequestsSection).toBeInTheDocument();
     expect(reviewRequestsSection?.textContent).toContain("(2)");
-
-    // Verify filtering: direct review requests only (not team requests)
-    const reviewRequestGroups = mockNotifications.filter(
-      (g) => g.hasReviewRequest && !g.isTeamReviewRequest
-    );
-    expect(reviewRequestGroups).toHaveLength(2);
-    expect(reviewRequestGroups[0].subject.title).toBe("Add new API method");
-    expect(reviewRequestGroups[1].subject.title).toBe("Fix payment validation");
   });
 
   it("should render notifications without a direct request but with a team request as Team Review Requests", () => {
-    // Setup: Create a notification with a team review request
+    // Setup: Create notification with hasReviewRequest=true, isTeamReviewRequest=true, teamSlug set
     const teamReviewRequest = createNotificationGroup({
       id: "repo1#url1",
       subject: {
@@ -194,34 +187,40 @@ describe("<App>", () => {
       },
       hasReviewRequest: true,
       isTeamReviewRequest: true,
-      teamSlug: "_team_review_requests",
-      teamName: "Team Review Requests",
+      teamSlug: "crafters",
+      teamName: "Crafters",
     });
 
-    // Setup: Create notifications WITHOUT team review requests (should not appear in team section)
+    // Setup: Create notifications that should NOT appear in team section
     const directReviewRequest = createNotificationGroup({
       id: "repo2#url2",
-      subject: { title: "Direct review", url: "url2", type: "PullRequest" },
+      subject: {
+        title: "Direct review",
+        url: "url2",
+        type: "PullRequest",
+      },
       hasReviewRequest: true,
       isTeamReviewRequest: false,
     });
 
     const ownContentNotification = createNotificationGroup({
       id: "repo3#url3",
-      subject: { title: "Your own PR", url: "url3", type: "PullRequest" },
+      subject: {
+        title: "Your own PR",
+        url: "url3",
+        type: "PullRequest",
+      },
       hasReviewRequest: false,
       isTeamReviewRequest: false,
       isOwnContent: true,
     });
 
-    const mockNotifications = [
-      teamReviewRequest,
-      directReviewRequest,
-      ownContentNotification,
-    ];
-
     vi.mocked(useNotifications).mockReturnValue({
-      notifications: mockNotifications,
+      notifications: [
+        teamReviewRequest,
+        directReviewRequest,
+        ownContentNotification,
+      ],
       user: mockUser,
       userTeams: mockUserTeams,
       loading: false,
@@ -237,36 +236,10 @@ describe("<App>", () => {
 
     render(<App />);
 
-    const allHeaders = screen.queryAllByText(/Review Requests/);
-    const teamSection = allHeaders.find(
-      (el) =>
-        el.textContent?.includes("Team Review Requests") &&
-        el.classList.contains("gradient-green-blue")
-    );
-
-    expect(teamSection).toBeDefined();
-    expect(teamSection).toBeInTheDocument();
-    expect(teamSection?.textContent).toContain("(1)");
-
-    // Verify team review requests are grouped by team
-    const teamGroups = mockNotifications.filter(
-      (g) => g.teamSlug && (g.isTeamReviewRequest || g.hasTeamMention)
-    );
-    expect(teamGroups).toHaveLength(1);
-    expect(teamGroups[0].subject.title).toBe(
-      "Add `children` property to `DropZone`"
-    );
-    expect(teamGroups[0].isTeamReviewRequest).toBe(true);
-    expect(teamGroups[0].teamSlug).toBe("_team_review_requests");
-    expect(teamGroups[0].teamName).toBe("Team Review Requests");
-
-    // Verify team requests do NOT appear in direct "Review Requests"
-    const directReviewRequests = mockNotifications.filter(
-      (g) => g.hasReviewRequest && !g.isTeamReviewRequest
-    );
-    expect(directReviewRequests).toHaveLength(1);
-    expect(directReviewRequests.every((g) => !g.isTeamReviewRequest)).toBe(
-      true
-    );
+    // Look for any team section (should have team name in it)
+    const craftersSection = screen.queryByText(/Crafters/);
+    expect(craftersSection).toBeDefined();
+    expect(craftersSection).toBeInTheDocument();
+    expect(craftersSection?.textContent).toContain("(1)");
   });
 });
