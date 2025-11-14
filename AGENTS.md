@@ -1,3 +1,43 @@
+# Agent Instructions for Zenhub
+
+## ⚠️ Post-Change Checklist
+
+After **EVERY** code change, you MUST complete the following steps in order:
+
+### 1. Run Tests
+
+```bash
+npm run test:run
+```
+
+Fix any test failures before proceeding.
+
+### 2. Run Type Check
+
+```bash
+npm run typecheck
+```
+
+Fix any TypeScript errors before proceeding.
+
+### 3. Run Combined Check (Optional - does both above)
+
+```bash
+npm run check
+```
+
+### 4. Deploy to Quick
+
+```bash
+npm run deploy
+# OR
+./deploy.sh
+```
+
+**Do not skip any of these steps.** Each step must pass before moving to the next.
+
+---
+
 # Quick
 
 [Quick](https://quick.shopify.io) is a tool at Shopify for quickly hosting static sites.
