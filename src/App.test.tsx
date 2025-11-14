@@ -250,7 +250,6 @@ describe("<App>", () => {
   it("should render notifications with a direct author review request as Review Requests", () => {
     const mockNotifications = createMockNotifications();
 
-    // Mock useNotifications to return our test data
     vi.mocked(useNotifications).mockReturnValue({
       notifications: mockNotifications,
       user: mockUser,
@@ -266,14 +265,11 @@ describe("<App>", () => {
       fetchNotifications: vi.fn(),
     });
 
-    // Render the App
     render(<App />);
 
-    // Check for the "Review Requests" section (use getAllByText to handle multiple matches)
     const allReviewHeaders = screen.queryAllByText(/Review Requests/);
     expect(allReviewHeaders.length).toBeGreaterThanOrEqual(1);
 
-    // Find the one that is exactly "Review Requests" (not "Team Review Requests")
     const reviewRequestsSection = allReviewHeaders.find(
       (el) =>
         el.textContent?.trim().startsWith("Review Requests") &&
@@ -281,40 +277,73 @@ describe("<App>", () => {
     );
     expect(reviewRequestsSection).toBeDefined();
     expect(reviewRequestsSection).toBeInTheDocument();
-
-    // Verify the count shows 2 (only direct review requests, not team)
     expect(reviewRequestsSection?.textContent).toContain("(2)");
 
-    // Verify we also have a "Team Review Requests" section with 1 item
-    const teamReviewRequestsSection = allReviewHeaders.find(
+    // Verify filtering: direct review requests only (not team requests)
+    const reviewRequestGroups = mockNotifications.filter(
+      (g) => g.hasReviewRequest && !g.isTeamReviewRequest
+    );
+    expect(reviewRequestGroups).toHaveLength(2);
+    expect(reviewRequestGroups[0].subject.title).toBe("Add new API method");
+    expect(reviewRequestGroups[1].subject.title).toBe("Fix payment validation");
+  });
+
+  it("should render notifications without a direct request but with a team request as Team Review Requests", () => {
+    const mockNotifications = createMockNotifications();
+
+    vi.mocked(useNotifications).mockReturnValue({
+      notifications: mockNotifications,
+      user: mockUser,
+      userTeams: mockUserTeams,
+      loading: false,
+      error: null,
+      initialLoad: false,
+      refreshAllPages: vi.fn(),
+      dismissNotification: vi.fn(),
+      loadMore: vi.fn(),
+      hasMore: false,
+      loadingMore: false,
+      fetchNotifications: vi.fn(),
+    });
+
+    render(<App />);
+
+    const teamReviewRequest = mockNotifications.find(
+      (n) => n.isTeamReviewRequest && n.hasReviewRequest
+    );
+    expect(teamReviewRequest).toBeDefined();
+    expect(teamReviewRequest?.teamSlug).toBe("_team_review_requests");
+
+    const allHeaders = screen.queryAllByText(/Review Requests/);
+    const teamSection = allHeaders.find(
       (el) =>
         el.textContent?.includes("Team Review Requests") &&
         el.classList.contains("gradient-green-blue")
     );
-    expect(teamReviewRequestsSection).toBeDefined();
-    expect(teamReviewRequestsSection).toBeInTheDocument();
-    expect(teamReviewRequestsSection?.textContent).toContain("(1)");
 
-    // Verify that the filtering logic worked correctly
-    // The key assertion: the groups passed to NotificationGroup components
-    // in the Review Requests section should only include notifications where
-    // hasReviewRequest is true AND isTeamReviewRequest is false
-    const reviewRequestGroups = mockNotifications.filter(
+    expect(teamSection).toBeDefined();
+    expect(teamSection).toBeInTheDocument();
+    expect(teamSection?.textContent).toContain("(1)");
+
+    // Verify team review requests are grouped by team
+    const teamGroups = mockNotifications.filter(
+      (g) => g.teamSlug && (g.isTeamReviewRequest || g.hasTeamMention)
+    );
+    expect(teamGroups).toHaveLength(1);
+    expect(teamGroups[0].subject.title).toBe(
+      "Add `children` property to `DropZone`"
+    );
+    expect(teamGroups[0].isTeamReviewRequest).toBe(true);
+    expect(teamGroups[0].teamSlug).toBe("_team_review_requests");
+    expect(teamGroups[0].teamName).toBe("Team Review Requests");
+
+    // Verify team requests do NOT appear in direct "Review Requests"
+    const directReviewRequests = mockNotifications.filter(
       (g) => g.hasReviewRequest && !g.isTeamReviewRequest
     );
-
-    expect(reviewRequestGroups).toHaveLength(2);
-    expect(reviewRequestGroups[0].subject.title).toBe("Add new API method");
-    expect(reviewRequestGroups[1].subject.title).toBe("Fix payment validation");
-
-    // Verify only team review requests are filtered out
-    const teamReviewGroups = mockNotifications.filter(
-      (g) => g.hasReviewRequest && g.isTeamReviewRequest
-    );
-
-    expect(teamReviewGroups).toHaveLength(1);
-    expect(teamReviewGroups[0].subject.title).toBe(
-      "Add `children` property to `DropZone`"
+    expect(directReviewRequests).toHaveLength(2);
+    expect(directReviewRequests.every((g) => !g.isTeamReviewRequest)).toBe(
+      true
     );
   });
 });
