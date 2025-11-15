@@ -436,4 +436,262 @@ describe("<App>", () => {
       });
     }
   );
+
+  it("should not show dismissed notifications after refresh", async () => {
+    vi.clearAllMocks();
+
+    // Pre-populate dismissed notifications in localStorage
+    localStorage.setItem(
+      "dismissed_notifications",
+      JSON.stringify([
+        "plasma-network/plasma.to#https://api.github.com/repos/plasma-network/plasma.to/issues/94",
+      ])
+    );
+
+    const mentionNotification: GitHubNotification = {
+      id: "19199998390",
+      unread: true,
+      reason: "mention",
+      updated_at: "2025-09-25T21:08:47Z",
+      last_read_at: undefined,
+      subject: {
+        title:
+          "Plasma Foundation | Over USD 2.4B TVL & 54.02% APY, XPL and Staking Rewards",
+        url: "https://api.github.com/repos/plasma-network/plasma.to/issues/94",
+        type: "Issue",
+        latest_comment_url: undefined,
+      },
+      repository: {
+        id: 1,
+        name: "plasma.to",
+        full_name: "plasma-network/plasma.to",
+        owner: {
+          login: "plasma-network",
+          id: 1,
+          avatar_url: "https://avatars.githubusercontent.com/u/1",
+          url: "https://api.github.com/users/plasma-network",
+          html_url: "https://github.com/plasma-network",
+        },
+        html_url: "https://github.com/plasma-network/plasma.to",
+        description: "Plasma Network",
+      },
+      url: "https://api.github.com/notifications/19199998390",
+      subscription_url:
+        "https://api.github.com/notifications/threads/19199998390",
+    };
+
+    setupMockApi({
+      notifications: [mentionNotification],
+    });
+
+    render(<App />);
+
+    await waitFor(
+      () => {
+        expect(screen.queryByText("Refreshing...")).toBeNull();
+      },
+      { timeout: 5000 }
+    );
+
+    // The notification should not be visible since it's already dismissed
+    expect(
+      screen.queryByText(
+        "Plasma Foundation | Over USD 2.4B TVL & 54.02% APY, XPL and Staking Rewards"
+      )
+    ).toBeNull();
+    expect(screen.queryByText(/Mentions/)).toBeNull();
+  });
+
+  it("should keep notifications dismissed across page reloads", async () => {
+    vi.clearAllMocks();
+
+    const mentionNotification: GitHubNotification = {
+      id: "19199998390",
+      unread: true,
+      reason: "mention",
+      updated_at: "2025-09-25T21:08:47Z",
+      last_read_at: undefined,
+      subject: {
+        title:
+          "Plasma Foundation | Over USD 2.4B TVL & 54.02% APY, XPL and Staking Rewards",
+        url: "https://api.github.com/repos/plasma-network/plasma.to/issues/94",
+        type: "Issue",
+        latest_comment_url: undefined,
+      },
+      repository: {
+        id: 1,
+        name: "plasma.to",
+        full_name: "plasma-network/plasma.to",
+        owner: {
+          login: "plasma-network",
+          id: 1,
+          avatar_url: "https://avatars.githubusercontent.com/u/1",
+          url: "https://api.github.com/users/plasma-network",
+          html_url: "https://github.com/plasma-network",
+        },
+        html_url: "https://github.com/plasma-network/plasma.to",
+        description: "Plasma Network",
+      },
+      url: "https://api.github.com/notifications/19199998390",
+      subscription_url:
+        "https://api.github.com/notifications/threads/19199998390",
+    };
+
+    setupMockApi({
+      notifications: [mentionNotification],
+    });
+
+    const { unmount } = render(<App />);
+
+    await waitFor(
+      () => {
+        expect(screen.queryByText("Refreshing...")).toBeNull();
+      },
+      { timeout: 5000 }
+    );
+
+    // Check that the notification is initially visible
+    const user = userEvent.setup();
+    const mentionsSection = screen.getByText(/Mentions/);
+    await user.click(mentionsSection);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          "Plasma Foundation | Over USD 2.4B TVL & 54.02% APY, XPL and Staking Rewards"
+        )
+      ).toBeDefined();
+    });
+
+    // Click dismiss button
+    const dismissButton = screen.getByLabelText("Dismiss notification");
+    await user.click(dismissButton);
+
+    // Wait for dismiss to be processed
+    await waitFor(() => {
+      expect(
+        screen.queryByText(
+          "Plasma Foundation | Over USD 2.4B TVL & 54.02% APY, XPL and Staking Rewards"
+        )
+      ).toBeNull();
+    });
+
+    // Unmount and remount to simulate page reload
+    unmount();
+
+    render(<App />);
+
+    await waitFor(
+      () => {
+        expect(screen.queryByText("Refreshing...")).toBeNull();
+      },
+      { timeout: 5000 }
+    );
+
+    // The notification should not be visible after reload
+    expect(
+      screen.queryByText(
+        "Plasma Foundation | Over USD 2.4B TVL & 54.02% APY, XPL and Staking Rewards"
+      )
+    ).toBeNull();
+    expect(screen.queryByText(/Mentions/)).toBeNull();
+  });
+
+  it("should keep notifications dismissed even when notification ID changes", async () => {
+    vi.clearAllMocks();
+
+    // Pre-populate dismissed notifications in localStorage
+    localStorage.setItem(
+      "dismissed_notifications",
+      JSON.stringify([
+        "plasma-network/plasma.to#https://api.github.com/repos/plasma-network/plasma.to/issues/94",
+      ])
+    );
+
+    // First notification with one ID
+    const mentionNotification1: GitHubNotification = {
+      id: "19199998390",
+      unread: true,
+      reason: "mention",
+      updated_at: "2025-09-25T21:08:47Z",
+      last_read_at: undefined,
+      subject: {
+        title:
+          "Plasma Foundation | Over USD 2.4B TVL & 54.02% APY, XPL and Staking Rewards",
+        url: "https://api.github.com/repos/plasma-network/plasma.to/issues/94",
+        type: "Issue",
+        latest_comment_url: undefined,
+      },
+      repository: {
+        id: 1,
+        name: "plasma.to",
+        full_name: "plasma-network/plasma.to",
+        owner: {
+          login: "plasma-network",
+          id: 1,
+          avatar_url: "https://avatars.githubusercontent.com/u/1",
+          url: "https://api.github.com/users/plasma-network",
+          html_url: "https://github.com/plasma-network",
+        },
+        html_url: "https://github.com/plasma-network/plasma.to",
+        description: "Plasma Network",
+      },
+      url: "https://api.github.com/notifications/19199998390",
+      subscription_url:
+        "https://api.github.com/notifications/threads/19199998390",
+    };
+
+    setupMockApi({
+      notifications: [mentionNotification1],
+    });
+
+    render(<App />);
+
+    await waitFor(
+      () => {
+        expect(screen.queryByText("Refreshing...")).toBeNull();
+      },
+      { timeout: 5000 }
+    );
+
+    // The notification should not be visible since it's already dismissed
+    expect(
+      screen.queryByText(
+        "Plasma Foundation | Over USD 2.4B TVL & 54.02% APY, XPL and Staking Rewards"
+      )
+    ).toBeNull();
+    expect(screen.queryByText(/Mentions/)).toBeNull();
+
+    // Now simulate a refresh where the notification comes back with a different ID
+    const mentionNotification2: GitHubNotification = {
+      ...mentionNotification1,
+      id: "19200000000", // Different notification ID
+      url: "https://api.github.com/notifications/19200000000",
+      subscription_url:
+        "https://api.github.com/notifications/threads/19200000000",
+    };
+
+    setupMockApi({
+      notifications: [mentionNotification2],
+    });
+
+    const user = userEvent.setup();
+    const refreshButton = screen.getByText("Refresh");
+    await user.click(refreshButton);
+
+    await waitFor(
+      () => {
+        expect(screen.queryByText("Refreshing...")).toBeNull();
+      },
+      { timeout: 5000 }
+    );
+
+    // The notification should still not be visible because we group by repo#issue URL
+    expect(
+      screen.queryByText(
+        "Plasma Foundation | Over USD 2.4B TVL & 54.02% APY, XPL and Staking Rewards"
+      )
+    ).toBeNull();
+    expect(screen.queryByText(/Mentions/)).toBeNull();
+  });
 });

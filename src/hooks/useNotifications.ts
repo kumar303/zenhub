@@ -645,6 +645,13 @@ export function useNotifications(token: string | null) {
     (groupId: string) => {
       const group = notifications.find((g) => g.id === groupId);
       if (group) {
+        console.log(
+          `[Dismiss] Starting dismiss for: ${group.subject.title} (${groupId})`
+        );
+        console.log(
+          `[Dismiss] Current dismissed list has ${dismissed.length} items`
+        );
+
         // Store the group ID instead of individual notification IDs
         // This ensures the group stays dismissed even if individual notifications change
         // Use a Set to prevent duplicates
@@ -652,11 +659,19 @@ export function useNotifications(token: string | null) {
         dismissedSet.add(groupId);
         const newDismissed = Array.from(dismissedSet);
 
+        console.log(
+          `[Dismiss] New dismissed list will have ${newDismissed.length} items`
+        );
+
         setDismissed(newDismissed);
         localStorage.setItem(
           STORAGE_KEYS.DISMISSED,
           JSON.stringify(newDismissed)
         );
+
+        // Verify localStorage was updated
+        const savedValue = localStorage.getItem(STORAGE_KEYS.DISMISSED);
+        console.log(`[Dismiss] Verified localStorage save:`, savedValue);
 
         // Remove from current notifications
         setNotifications(notifications.filter((g) => g.id !== groupId));
@@ -667,6 +682,10 @@ export function useNotifications(token: string | null) {
         console.log(`Updated dismissed list:`, newDismissed);
         console.log(
           `Dismissed list saved to localStorage with ${newDismissed.length} items`
+        );
+      } else {
+        console.error(
+          `[Dismiss] Could not find notification to dismiss: ${groupId}`
         );
       }
     },
