@@ -96,6 +96,66 @@ const createMockResponse = (data: any, status = 200): Response =>
     formData: async () => new FormData(),
   } as Response);
 
+interface MockApiOptions {
+  user?: GitHubUser;
+  teams?: GitHubTeam[];
+  notifications?: GitHubNotification[];
+  pullRequests?: Record<
+    string,
+    {
+      state?: string;
+      draft?: boolean;
+      requested_reviewers?: any[];
+      requested_teams?: any[];
+    }
+  >;
+}
+
+function setupMockApi(options: MockApiOptions = {}) {
+  const {
+    user = mockUser,
+    teams = mockUserTeams,
+    notifications = [],
+    pullRequests = {},
+  } = options;
+
+  const mockFetch = vi.mocked(global.fetch);
+
+  mockFetch.mockImplementation((url) => {
+    if (url.toString().includes("/user/teams")) {
+      return Promise.resolve(createMockResponse(teams));
+    }
+
+    if (
+      url.toString().includes("/user") &&
+      !url.toString().includes("/teams")
+    ) {
+      return Promise.resolve(createMockResponse(user));
+    }
+
+    if (url.toString().includes("/notifications")) {
+      return Promise.resolve(createMockResponse(notifications));
+    }
+
+    // Check for PR details
+    for (const [prPath, prData] of Object.entries(pullRequests)) {
+      if (url.toString().includes(prPath)) {
+        return Promise.resolve(
+          createMockResponse({
+            state: "open",
+            draft: false,
+            requested_reviewers: [],
+            requested_teams: [],
+            ...prData,
+          })
+        );
+      }
+    }
+
+    return Promise.resolve(createMockResponse({}));
+  });
+}
+
 describe("<App>", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -126,108 +186,58 @@ describe("<App>", () => {
     async () => {
       vi.clearAllMocks();
 
-      const mockFetch = vi.mocked(global.fetch);
-
-      const mockNotifications: GitHubNotification[] = [
-        {
-          id: "notif-review-1",
-          unread: true,
-          reason: "review_requested",
-          updated_at: "2025-11-14T10:00:00Z",
-          subject: {
-            title: "Fix payment processing bug",
-            url: "https://api.github.com/repos/test/test-repo/pulls/100",
-            type: "PullRequest",
+      setupMockApi({
+        notifications: [
+          {
+            id: "notif-review-1",
+            unread: true,
+            reason: "review_requested",
+            updated_at: "2025-11-14T10:00:00Z",
+            subject: {
+              title: "Fix payment processing bug",
+              url: "https://api.github.com/repos/test/test-repo/pulls/100",
+              type: "PullRequest",
+            },
+            repository: mockRepository,
+            url: "https://api.github.com/notifications/threads/notif-review-1",
+            subscription_url:
+              "https://api.github.com/notifications/threads/notif-review-1/subscription",
           },
-          repository: mockRepository,
-          url: "https://api.github.com/notifications/threads/notif-review-1",
-          subscription_url:
-            "https://api.github.com/notifications/threads/notif-review-1/subscription",
-        },
-        {
-          id: "notif-review-2",
-          unread: true,
-          reason: "review_requested",
-          updated_at: "2025-11-14T09:00:00Z",
-          subject: {
-            title: "Add new feature flag system",
-            url: "https://api.github.com/repos/test/test-repo/pulls/101",
-            type: "PullRequest",
+          {
+            id: "notif-review-2",
+            unread: true,
+            reason: "review_requested",
+            updated_at: "2025-11-14T09:00:00Z",
+            subject: {
+              title: "Add new feature flag system",
+              url: "https://api.github.com/repos/test/test-repo/pulls/101",
+              type: "PullRequest",
+            },
+            repository: mockRepository,
+            url: "https://api.github.com/notifications/threads/notif-review-2",
+            subscription_url:
+              "https://api.github.com/notifications/threads/notif-review-2/subscription",
           },
-          repository: mockRepository,
-          url: "https://api.github.com/notifications/threads/notif-review-2",
-          subscription_url:
-            "https://api.github.com/notifications/threads/notif-review-2/subscription",
-        },
-        {
-          id: "notif-author",
-          unread: true,
-          reason: "author",
-          updated_at: "2025-11-14T08:00:00Z",
-          subject: {
-            title: "My own PR",
-            url: "https://api.github.com/repos/test/test-repo/pulls/102",
-            type: "PullRequest",
+          {
+            id: "notif-author",
+            unread: true,
+            reason: "author",
+            updated_at: "2025-11-14T08:00:00Z",
+            subject: {
+              title: "My own PR",
+              url: "https://api.github.com/repos/test/test-repo/pulls/102",
+              type: "PullRequest",
+            },
+            repository: mockRepository,
+            url: "https://api.github.com/notifications/threads/notif-author",
+            subscription_url:
+              "https://api.github.com/notifications/threads/notif-author/subscription",
           },
-          repository: mockRepository,
-          url: "https://api.github.com/notifications/threads/notif-author",
-          subscription_url:
-            "https://api.github.com/notifications/threads/notif-author/subscription",
+        ],
+        pullRequests: {
+          "/pulls/100": { requested_reviewers: [mockUser] },
+          "/pulls/101": { requested_reviewers: [mockUser] },
         },
-      ];
-
-      mockFetch.mockImplementation((url) => {
-        if (
-          url.toString().includes("/user") &&
-          !url.toString().includes("/teams")
-        ) {
-          return Promise.resolve(createMockResponse(mockUser));
-        }
-
-        if (url.toString().includes("/user/teams")) {
-          return Promise.resolve(createMockResponse(mockUserTeams));
-        }
-
-        if (url.toString().includes("/notifications")) {
-          return Promise.resolve(createMockResponse(mockNotifications));
-        }
-
-        // For PR details (checking if team review request)
-        if (url.toString().includes("/pulls/100")) {
-          return Promise.resolve(
-            createMockResponse({
-              state: "open",
-              draft: false,
-              requested_reviewers: [mockUser], // Direct user review for PR 100
-              requested_teams: [],
-            })
-          );
-        }
-
-        if (url.toString().includes("/pulls/101")) {
-          return Promise.resolve(
-            createMockResponse({
-              state: "open",
-              draft: false,
-              requested_reviewers: [mockUser], // Direct user review for PR 101
-              requested_teams: [],
-            })
-          );
-        }
-
-        if (url.toString().includes("/pulls/102")) {
-          return Promise.resolve(
-            createMockResponse({
-              state: "open",
-              draft: false,
-              requested_reviewers: [],
-              requested_teams: [],
-            })
-          );
-        }
-
-        // Default response
-        return Promise.resolve(createMockResponse({}));
       });
 
       render(<App />);
@@ -269,113 +279,60 @@ describe("<App>", () => {
     async () => {
       vi.clearAllMocks();
 
-      const mockFetch = vi.mocked(global.fetch);
-
-      const mockNotifications: GitHubNotification[] = [
-        {
-          id: "notif-team-review",
-          unread: true,
-          reason: "review_requested",
-          updated_at: "2025-11-14T10:00:00Z",
-          subject: {
-            title: "Update team documentation",
-            url: "https://api.github.com/repos/test/test-repo/pulls/200",
-            type: "PullRequest",
+      setupMockApi({
+        notifications: [
+          {
+            id: "notif-team-review",
+            unread: true,
+            reason: "review_requested",
+            updated_at: "2025-11-14T10:00:00Z",
+            subject: {
+              title: "Update team documentation",
+              url: "https://api.github.com/repos/test/test-repo/pulls/200",
+              type: "PullRequest",
+            },
+            repository: mockRepository,
+            url: "https://api.github.com/notifications/threads/notif-team-review",
+            subscription_url:
+              "https://api.github.com/notifications/threads/notif-team-review/subscription",
           },
-          repository: mockRepository,
-          url: "https://api.github.com/notifications/threads/notif-team-review",
-          subscription_url:
-            "https://api.github.com/notifications/threads/notif-team-review/subscription",
-        },
-        {
-          id: "notif-direct-review",
-          unread: true,
-          reason: "review_requested",
-          updated_at: "2025-11-14T09:00:00Z",
-          subject: {
-            title: "Fix bug in checkout",
-            url: "https://api.github.com/repos/test/test-repo/pulls/201",
-            type: "PullRequest",
+          {
+            id: "notif-direct-review",
+            unread: true,
+            reason: "review_requested",
+            updated_at: "2025-11-14T09:00:00Z",
+            subject: {
+              title: "Fix bug in checkout",
+              url: "https://api.github.com/repos/test/test-repo/pulls/201",
+              type: "PullRequest",
+            },
+            repository: mockRepository,
+            url: "https://api.github.com/notifications/threads/notif-direct-review",
+            subscription_url:
+              "https://api.github.com/notifications/threads/notif-direct-review/subscription",
           },
-          repository: mockRepository,
-          url: "https://api.github.com/notifications/threads/notif-direct-review",
-          subscription_url:
-            "https://api.github.com/notifications/threads/notif-direct-review/subscription",
-        },
-        {
-          id: "notif-author",
-          unread: true,
-          reason: "author",
-          updated_at: "2025-11-14T08:00:00Z",
-          subject: {
-            title: "My own PR",
-            url: "https://api.github.com/repos/test/test-repo/pulls/202",
-            type: "PullRequest",
+          {
+            id: "notif-author",
+            unread: true,
+            reason: "author",
+            updated_at: "2025-11-14T08:00:00Z",
+            subject: {
+              title: "My own PR",
+              url: "https://api.github.com/repos/test/test-repo/pulls/202",
+              type: "PullRequest",
+            },
+            repository: mockRepository,
+            url: "https://api.github.com/notifications/threads/notif-author",
+            subscription_url:
+              "https://api.github.com/notifications/threads/notif-author/subscription",
           },
-          repository: mockRepository,
-          url: "https://api.github.com/notifications/threads/notif-author",
-          subscription_url:
-            "https://api.github.com/notifications/threads/notif-author/subscription",
+        ],
+        pullRequests: {
+          "/pulls/200": {
+            requested_teams: [{ slug: "crafters", name: "Crafters", id: 233 }],
+          },
+          "/pulls/201": { requested_reviewers: [mockUser] },
         },
-      ];
-
-      mockFetch.mockImplementation((url) => {
-        if (url.toString().includes("/user/teams")) {
-          return Promise.resolve(createMockResponse(mockUserTeams));
-        }
-
-        if (
-          url.toString().includes("/user") &&
-          !url.toString().includes("/teams")
-        ) {
-          return Promise.resolve(createMockResponse(mockUser));
-        }
-
-        if (url.toString().includes("/notifications")) {
-          return Promise.resolve(createMockResponse(mockNotifications));
-        }
-
-        // For PR details - differentiate between team and direct review
-        if (url.toString().includes("/pulls/200")) {
-          // Team review request
-          return Promise.resolve(
-            createMockResponse({
-              state: "open",
-              draft: false,
-              requested_reviewers: [],
-              requested_teams: [
-                { slug: "crafters", name: "Crafters", id: 233 },
-              ],
-            })
-          );
-        }
-
-        if (url.toString().includes("/pulls/201")) {
-          // Direct review request
-          return Promise.resolve(
-            createMockResponse({
-              state: "open",
-              draft: false,
-              requested_reviewers: [mockUser],
-              requested_teams: [],
-            })
-          );
-        }
-
-        if (url.toString().includes("/pulls/202")) {
-          // Author's own PR
-          return Promise.resolve(
-            createMockResponse({
-              state: "open",
-              draft: false,
-              requested_reviewers: [],
-              requested_teams: [],
-            })
-          );
-        }
-
-        // Default response
-        return Promise.resolve(createMockResponse({}));
       });
 
       render(<App />);
