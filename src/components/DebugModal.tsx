@@ -193,6 +193,9 @@ location.reload();
         teamsCacheKey: localStorage.getItem(CACHE_KEYS.USER_TEAMS)
           ? "exists"
           : "empty",
+        stateCacheKey: localStorage.getItem("github_state_cache")
+          ? "exists"
+          : "empty",
         dismissedNotifications: (() => {
           const dismissed = localStorage.getItem("dismissed_notifications");
           if (!dismissed) return "none";
@@ -208,6 +211,24 @@ location.reload();
           }
         })(),
       },
+      stateCache: (() => {
+        const stateCache = localStorage.getItem("github_state_cache");
+        if (!stateCache) return "empty";
+        try {
+          const parsed = JSON.parse(stateCache);
+          const entries = Object.entries(parsed).map(([url, data]: [string, any]) => ({
+            url,
+            state: data.state,
+            age: Math.round((Date.now() - data.timestamp) / 1000 / 60) + " minutes",
+          }));
+          return {
+            count: entries.length,
+            entries: entries.slice(0, 10), // Show first 10 entries
+          };
+        } catch (e) {
+          return "invalid";
+        }
+      })(),
       debugInstructions: {
         forProblemNotifications: [
           "1. Copy the clearCacheScript from the problemNotifications section",

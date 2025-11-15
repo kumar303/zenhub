@@ -9,6 +9,12 @@
 - Good comments explain WHY, not WHAT
 - If the code is self-explanatory through good naming and structure, no comment is needed
 
+### Debugging
+
+- When you need diagnostic information from the user, add it to the Debug output (via the debug modal), not just console logs
+- This allows the user to easily copy/paste the full debug data for you
+- Console logs should be supplementary, but critical debugging data must be in the Debug output
+
 ## ⚠️ Post-Change Checklist
 
 After **EVERY** code change, you MUST complete the following steps in order:
