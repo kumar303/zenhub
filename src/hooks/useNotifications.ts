@@ -416,13 +416,14 @@ export function useNotifications(token: string | null) {
   );
 
   const fetchNotifications = useCallback(
-    async (
-      page: number = 1,
-      append: boolean = false,
-      isManualLoad: boolean = false,
-      teams: GitHubTeam[] | undefined,
-      userData: GitHubUser | undefined
-    ) => {
+    async (options: {
+      page: number;
+      append: boolean;
+      isManualLoad: boolean;
+      teams: GitHubTeam[] | undefined;
+      userData: GitHubUser | undefined;
+    }) => {
+      const { page, append, isManualLoad, teams, userData } = options;
       if (!api) return;
 
       // Don't show loading spinner on subsequent fetches unless it's the initial load
@@ -755,7 +756,13 @@ export function useNotifications(token: string | null) {
 
         // Now fetch notifications with teams and user
         if (mounted && loadedUser) {
-          await fetchNotifications(1, false, false, loadedTeams, loadedUser);
+          await fetchNotifications({
+            page: 1,
+            append: false,
+            isManualLoad: false,
+            teams: loadedTeams,
+            userData: loadedUser,
+          });
         }
       } catch (err: any) {
         console.error("Initialization error:", err);
@@ -799,13 +806,13 @@ export function useNotifications(token: string | null) {
     if (!loadingMore && hasMore && currentPage < 10) {
       // Limit to 10 pages max (500 notifications)
       // Pass isManualLoad = true to prevent web notifications
-      await fetchNotifications(
-        currentPage + 1,
-        true,
-        true,
-        userTeams,
-        user ?? undefined
-      );
+      await fetchNotifications({
+        page: currentPage + 1,
+        append: true,
+        isManualLoad: true,
+        teams: userTeams,
+        userData: user ?? undefined,
+      });
     }
   }, [currentPage, hasMore, loadingMore, fetchNotifications]);
 
