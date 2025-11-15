@@ -175,6 +175,9 @@ describe("<App>", () => {
     teamCache.clear();
     teamsCache.clear();
 
+    // Clear sessionStorage to ensure clean state for web notifications
+    sessionStorage.clear();
+
     mockLocalStorage.data["github_token"] = "test-token-123";
     mockLocalStorage.data["github_user"] = JSON.stringify(mockUser);
 
@@ -1039,4 +1042,141 @@ describe("<App>", () => {
     );
   });
 
+  it("should send web notifications only for newly received notifications after refresh", async () => {
+    vi.clearAllMocks();
+    stateCache.clear();
+    teamCache.clear();
+    teamsCache.clear();
+
+    // Clear any existing Notification mock
+    delete (global as any).Notification;
+
+    // Mock Notification API
+    const mockNotification = vi.fn();
+    global.Notification = mockNotification as any;
+    (global.Notification as any).permission = "granted";
+    (global.Notification as any).requestPermission = vi
+      .fn()
+      .mockResolvedValue("granted");
+
+    // Initial notification
+    const existingNotification: GitHubNotification = {
+      id: "notif-existing",
+      unread: true,
+      reason: "review_requested",
+      updated_at: "2025-11-14T10:00:00Z",
+      subject: {
+        title: "Existing PR",
+        url: "https://api.github.com/repos/test/test-repo/pulls/100",
+        type: "PullRequest",
+      },
+      repository: mockRepository,
+      url: "https://api.github.com/notifications/notif-existing",
+      subscription_url:
+        "https://api.github.com/notifications/threads/notif-existing",
+    };
+
+    // Setup API with initial notification
+    setupMockApi({
+      notifications: [existingNotification],
+      pullRequests: {
+        "/pulls/100": {
+          state: "open",
+          requested_reviewers: [mockUser],
+        },
+      },
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    // Wait for initial load
+    await waitFor(
+      () => {
+        expect(screen.queryByText("Refreshing...")).toBeNull();
+      },
+      { timeout: 5000 }
+    );
+
+    // No notifications should be sent on initial load
+    expect(mockNotification).not.toHaveBeenCalled();
+
+    // Now add a new notification and refresh
+    const newNotification: GitHubNotification = {
+      id: "notif-new",
+      unread: true,
+      reason: "mention",
+      updated_at: "2025-11-14T11:00:00Z",
+      subject: {
+        title: "New PR with mention",
+        url: "https://api.github.com/repos/test/test-repo/pulls/101",
+        type: "PullRequest",
+      },
+      repository: mockRepository,
+      url: "https://api.github.com/notifications/notif-new",
+      subscription_url:
+        "https://api.github.com/notifications/threads/notif-new",
+    };
+
+    // Update mock to return both notifications
+    setupMockApi({
+      notifications: [existingNotification, newNotification],
+      pullRequests: {
+        "/pulls/100": {
+          state: "open",
+          requested_reviewers: [mockUser],
+        },
+        "/pulls/101": {
+          state: "open",
+        },
+      },
+    });
+
+    // Click refresh button
+    const menuButton = screen.getByRole("button", { name: /More options/i });
+    await user.click(menuButton);
+
+    const refreshButton = screen.getByText("Refresh");
+    await user.click(refreshButton);
+
+    // Wait for refresh to complete
+    await waitFor(
+      () => {
+        expect(screen.queryByText("Refreshing...")).toBeNull();
+      },
+      { timeout: 5000 }
+    );
+
+    // Verify notification was called only for the new notification
+    await waitFor(() => {
+      expect(mockNotification).toHaveBeenCalledTimes(1);
+    });
+
+    expect(mockNotification).toHaveBeenCalledWith(
+      "[Mention] New PR with mention",
+      expect.objectContaining({
+        body: "test/test-repo",
+        icon: "https://github.githubassets.com/favicons/favicon.png",
+        tag: expect.stringContaining(
+          "test/test-repo#https://api.github.com/repos/test/test-repo/pulls/101"
+        ),
+        requireInteraction: true,
+      })
+    );
+
+    // Refresh again without new notifications - should not send any
+    mockNotification.mockClear();
+    await user.click(menuButton);
+    await user.click(refreshButton);
+
+    await waitFor(
+      () => {
+        expect(screen.queryByText("Refreshing...")).toBeNull();
+      },
+      { timeout: 5000 }
+    );
+
+    // No new notifications should be sent
+    expect(mockNotification).not.toHaveBeenCalled();
+  });
 });
