@@ -839,4 +839,65 @@ describe("<App>", () => {
     ).toBeNull();
     expect(screen.queryByText(/Mentions/)).toBeNull();
   });
+
+  it("should show notifications after clearing cache", async () => {
+    vi.clearAllMocks();
+
+    const reviewRequestPR: GitHubNotification = {
+      id: "notif-review",
+      unread: true,
+      reason: "review_requested",
+      updated_at: "2025-11-14T10:00:00Z",
+      last_read_at: undefined,
+      subject: {
+        title: "Fix authentication bug",
+        url: "https://api.github.com/repos/test/test-repo/pulls/500",
+        type: "PullRequest",
+        latest_comment_url: undefined,
+      },
+      repository: {
+        id: 1,
+        name: "test-repo",
+        full_name: "test/test-repo",
+        owner: {
+          login: "test",
+          id: 1,
+          avatar_url: "https://avatars.githubusercontent.com/u/1",
+          url: "https://api.github.com/users/test",
+          html_url: "https://github.com/test",
+        },
+        html_url: "https://github.com/test/test-repo",
+        description: "Test repository",
+      },
+      url: "https://api.github.com/notifications/notif-review",
+      subscription_url:
+        "https://api.github.com/notifications/threads/notif-review",
+    };
+
+    // Simulate clearing localStorage (like Clear Cache button) except token
+    delete mockLocalStorage.data["github_user"];
+
+    setupMockApi({
+      notifications: [reviewRequestPR],
+      pullRequests: {
+        "/pulls/500": {
+          state: "open",
+          requested_reviewers: [{ login: "kumar303" }],
+        },
+      },
+    });
+
+    render(<App />);
+
+    await waitFor(
+      () => {
+        expect(screen.queryByText("Refreshing...")).toBeNull();
+      },
+      { timeout: 5000 }
+    );
+
+    // Should show notifications even though user cache was cleared
+    expect(screen.queryByText("No notifications! 🎉")).toBeNull();
+    expect(screen.queryByText(/Review Requests/)).toBeDefined();
+  });
 });

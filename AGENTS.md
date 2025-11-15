@@ -15,6 +15,13 @@
 - This allows the user to easily copy/paste the full debug data for you
 - Console logs should be supplementary, but critical debugging data must be in the Debug output
 
+### Testing
+
+- When writing tests for bug fixes, ALWAYS verify the test fails before the fix is applied
+- Either write the test first (before implementing the fix), or comment out the fix and verify the test fails
+- A test that passes both with and without the fix is not testing the right thing
+- This "comment, fail, uncomment, pass" strategy ensures tests are actually validating the fix
+
 ## ⚠️ Post-Change Checklist
 
 After **EVERY** code change, you MUST complete the following steps in order:

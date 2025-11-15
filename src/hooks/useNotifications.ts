@@ -79,8 +79,15 @@ export function useNotifications(token: string | null) {
   const api = useMemo(() => (token ? new GitHubAPI(token) : null), [token]);
 
   const processNotifications = useCallback(
-    async (rawNotifications: GitHubNotification[], teams?: GitHubTeam[]) => {
-      if (!api || !user) return [];
+    async (
+      rawNotifications: GitHubNotification[],
+      teams?: GitHubTeam[],
+      userData?: GitHubUser
+    ) => {
+      // Use passed user or fall back to state
+      const effectiveUser = userData ?? user;
+
+      if (!api || !effectiveUser) return [];
 
       // Use passed teams or fall back to state
       const effectiveTeams = teams ?? userTeams;
@@ -288,7 +295,7 @@ export function useNotifications(token: string | null) {
         const checkPromise = api
           .checkTeamReviewRequest(
             notification.subject.url,
-            user.login,
+            effectiveUser.login,
             notification.reason
           )
           .then(async (result) => {
@@ -413,7 +420,8 @@ export function useNotifications(token: string | null) {
       page: number = 1,
       append: boolean = false,
       isManualLoad: boolean = false,
-      teams?: GitHubTeam[]
+      teams?: GitHubTeam[],
+      userData?: GitHubUser
     ) => {
       if (!api) return;
 
@@ -481,7 +489,7 @@ export function useNotifications(token: string | null) {
         );
 
         // Process and group notifications
-        const processed = await processNotifications(filtered, teams);
+        const processed = await processNotifications(filtered, teams, userData);
 
         console.log(
           `[FetchNotifications] Processed ${processed.length} groups, dismissed list has ${dismissed.length} items`
@@ -714,8 +722,10 @@ export function useNotifications(token: string | null) {
 
       try {
         // Fetch user if not already loaded
+        let loadedUser = user;
         if (!user) {
           const userData = await api.getUser();
+          loadedUser = userData;
           if (mounted) {
             setUser(userData);
             localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
@@ -743,9 +753,9 @@ export function useNotifications(token: string | null) {
           }
         }
 
-        // Now fetch notifications with teams
-        if (mounted && loadedTeams) {
-          await fetchNotifications(1, false, false, loadedTeams);
+        // Now fetch notifications with teams and user
+        if (mounted && loadedUser) {
+          await fetchNotifications(1, false, false, loadedTeams, loadedUser);
         }
       } catch (err: any) {
         console.error("Initialization error:", err);
