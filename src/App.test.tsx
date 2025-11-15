@@ -956,4 +956,86 @@ describe("<App>", () => {
     // The 404'd notification (25th) should not be visible
     expect(screen.queryByText("This will 404")).toBeNull();
   });
+
+  it("should show notifications after automatic refresh timer", async () => {
+    vi.clearAllMocks();
+
+    const reviewRequestPR: GitHubNotification = {
+      id: "notif-timer",
+      unread: true,
+      reason: "review_requested",
+      updated_at: "2025-11-14T10:00:00Z",
+      last_read_at: undefined,
+      subject: {
+        title: "Timer test PR",
+        url: "https://api.github.com/repos/test/test-repo/pulls/600",
+        type: "PullRequest",
+        latest_comment_url: undefined,
+      },
+      repository: {
+        id: 1,
+        name: "test-repo",
+        full_name: "test/test-repo",
+        owner: {
+          login: "test",
+          id: 1,
+          avatar_url: "https://avatars.githubusercontent.com/u/1",
+          url: "https://api.github.com/users/test",
+          html_url: "https://github.com/test",
+        },
+        html_url: "https://github.com/test/test-repo",
+        description: "Test repository",
+      },
+      url: "https://api.github.com/notifications/notif-timer",
+      subscription_url:
+        "https://api.github.com/notifications/threads/notif-timer",
+    };
+
+    setupMockApi({
+      notifications: [reviewRequestPR],
+      pullRequests: {
+        "/pulls/600": {
+          state: "open",
+          requested_reviewers: [{ login: "kumar303" }],
+        },
+      },
+    });
+
+    render(<App />);
+
+    await waitFor(
+      () => {
+        expect(screen.queryByText("Refreshing...")).toBeNull();
+      },
+      { timeout: 5000 }
+    );
+
+    // Should show notification initially
+    expect(screen.queryByText("No notifications! 🎉")).toBeNull();
+
+    const user = userEvent.setup();
+    const reviewRequestsSection = screen.getByText(/Review Requests/);
+    await user.click(reviewRequestsSection);
+
+    await waitFor(() => {
+      expect(screen.getByText("Timer test PR")).toBeDefined();
+    });
+
+    // Simulate the automatic refresh timer firing
+    // First the setTimeout(0), then the setInterval(60000)
+    vi.useFakeTimers();
+    vi.advanceTimersByTime(1); // Trigger setTimeout
+    vi.advanceTimersByTime(60000); // Trigger setInterval
+
+    await vi.runAllTimersAsync();
+    vi.useRealTimers();
+
+    await waitFor(
+      () => {
+        // Should still show notifications after timer refresh
+        expect(screen.queryByText("Timer test PR")).toBeDefined();
+      },
+      { timeout: 5000 }
+    );
+  });
 });

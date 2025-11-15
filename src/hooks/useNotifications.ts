@@ -839,7 +839,11 @@ export function useNotifications(token: string | null) {
       setHasMore(allResults[allResults.length - 1].length === 50);
 
       // Process all notifications at once
-      const processed = await processNotifications(allNotifications);
+      const processed = await processNotifications(
+        allNotifications,
+        userTeams,
+        user ?? undefined
+      );
 
       // Filter out dismissed groups
       const nonDismissedGroups = processed.filter((group) => {
@@ -865,7 +869,11 @@ export function useNotifications(token: string | null) {
       }
 
       // Log if we find any closed/merged items that would have triggered notifications
-      const allProcessedGroups = await processNotifications(allNotifications);
+      const allProcessedGroups = await processNotifications(
+        allNotifications,
+        userTeams,
+        user ?? undefined
+      );
       for (const group of allProcessedGroups) {
         if (group.isProminentForMe) {
           // Check if this was filtered out for being closed/merged
