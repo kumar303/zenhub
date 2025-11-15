@@ -1,5 +1,14 @@
 # Agent Instructions for Zenhub
 
+## Code Style Guidelines
+
+### Comments
+
+- Only write code comments when the code itself is hard to figure out
+- Avoid obvious comments like `// Render the app` for `render(<App />)`
+- Good comments explain WHY, not WHAT
+- If the code is self-explanatory through good naming and structure, no comment is needed
+
 ## ⚠️ Post-Change Checklist
 
 After **EVERY** code change, you MUST complete the following steps in order:

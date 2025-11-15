@@ -98,20 +98,16 @@ const createMockResponse = (data: any, status = 200): Response =>
 
 describe("<App>", () => {
   beforeEach(() => {
-    // Clear all mocks
     vi.clearAllMocks();
     mockLocalStorage.data = {};
 
-    // Clear all caches
     stateCache.clear();
     teamCache.clear();
     teamsCache.clear();
 
-    // Set up a logged-in state
     mockLocalStorage.data["github_token"] = "test-token-123";
     mockLocalStorage.data["github_user"] = JSON.stringify(mockUser);
 
-    // Mock hooks and utilities
     vi.mocked(useClickedNotifications).mockReturnValue({
       markAsClicked: vi.fn(),
       isClicked: vi.fn(() => false),
@@ -121,7 +117,6 @@ describe("<App>", () => {
       return subject.url.replace("api.github.com/repos", "github.com");
     });
 
-    // Mock fetch globally
     global.fetch = vi.fn();
   });
 
@@ -129,13 +124,10 @@ describe("<App>", () => {
     "should render notifications with a direct author review request as Review Requests",
     { timeout: 15000 },
     async () => {
-      // Reset mocks for this test
       vi.clearAllMocks();
 
-      // Set up fetch mocks for API calls
       const mockFetch = vi.mocked(global.fetch);
 
-      // Create raw GitHub notification data
       const mockNotifications: GitHubNotification[] = [
         {
           id: "notif-review-1",
@@ -184,7 +176,6 @@ describe("<App>", () => {
         },
       ];
 
-      // Set up the sequence of API calls
       mockFetch.mockImplementation((url) => {
         if (
           url.toString().includes("/user") &&
@@ -241,7 +232,6 @@ describe("<App>", () => {
 
       render(<App />);
 
-      // Wait for the notifications to load and render
       await waitFor(
         () => {
           // Find all elements containing "Review Requests"
@@ -259,14 +249,12 @@ describe("<App>", () => {
         { timeout: 10000 } // Give more time for async processing
       );
 
-      // Click on the Review Requests section to expand it
       const user = userEvent.setup();
       const reviewRequestsHeader = await screen.findByRole("button", {
         name: "Expand section",
       });
       await user.click(reviewRequestsHeader);
 
-      // Now the content should be visible
       await waitFor(() => {
         expect(screen.getByText("Fix payment processing bug")).toBeDefined();
       });
@@ -279,13 +267,10 @@ describe("<App>", () => {
     "should render notifications without a direct request but with a team request as Team Review Requests",
     { timeout: 15000 },
     async () => {
-      // Reset mocks for this test
       vi.clearAllMocks();
 
-      // Set up fetch mocks for API calls
       const mockFetch = vi.mocked(global.fetch);
 
-      // Create raw GitHub notification data
       const mockNotifications: GitHubNotification[] = [
         {
           id: "notif-team-review",
@@ -334,7 +319,6 @@ describe("<App>", () => {
         },
       ];
 
-      // Set up the sequence of API calls
       mockFetch.mockImplementation((url) => {
         if (url.toString().includes("/user/teams")) {
           return Promise.resolve(createMockResponse(mockUserTeams));
@@ -396,10 +380,8 @@ describe("<App>", () => {
 
       render(<App />);
 
-      // Wait for the notifications to load and render
       await waitFor(
         () => {
-          // Check for the Team Review Requests section
           const teamRequestsSection = screen.getByText(/Team Review Requests/);
           expect(teamRequestsSection).toBeDefined();
           expect(teamRequestsSection.textContent).toContain("(1)");
@@ -407,14 +389,12 @@ describe("<App>", () => {
         { timeout: 10000 }
       );
 
-      // Click on the Team Review Requests section to expand it
       const user = userEvent.setup();
       const teamRequestsElement = await screen.findByText(
         /Team Review Requests/
       );
       await user.click(teamRequestsElement);
 
-      // Now the content should be visible
       await waitFor(() => {
         expect(screen.getByText("Update team documentation")).toBeDefined();
       });
