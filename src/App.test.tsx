@@ -12,12 +12,15 @@ import type {
 // Mock modules
 vi.mock("./hooks/useClickedNotifications");
 vi.mock("./utils/url");
-vi.mock("./utils/teamCache");
 
 // Import mocked modules
 import { useClickedNotifications } from "./hooks/useClickedNotifications";
 import { getSubjectUrl } from "./utils/url";
+
+// Import cache modules (not mocked)
 import { teamCache } from "./utils/teamCache";
+import { stateCache } from "./utils/stateCache";
+import { teamsCache } from "./utils/teamsCache";
 
 // Mock user data
 const mockUser: GitHubUser = {
@@ -99,6 +102,11 @@ describe("<App>", () => {
     vi.clearAllMocks();
     mockLocalStorage.data = {};
 
+    // Clear all caches
+    stateCache.clear();
+    teamCache.clear();
+    teamsCache.clear();
+
     // Set up a logged-in state
     mockLocalStorage.data["github_token"] = "test-token-123";
     mockLocalStorage.data["github_user"] = JSON.stringify(mockUser);
@@ -112,10 +120,6 @@ describe("<App>", () => {
     vi.mocked(getSubjectUrl).mockImplementation((subject) => {
       return subject.url.replace("api.github.com/repos", "github.com");
     });
-
-    // Mock team cache
-    vi.mocked(teamCache.get).mockReturnValue(null);
-    vi.mocked(teamCache.set).mockImplementation(() => {});
 
     // Mock fetch globally
     global.fetch = vi.fn();
@@ -278,20 +282,6 @@ describe("<App>", () => {
       // Reset mocks for this test
       vi.clearAllMocks();
 
-      // Set up team cache to return team info for the team review request
-      vi.mocked(teamCache.get).mockImplementation((notificationId) => {
-        if (notificationId === "notif-team-review") {
-          return {
-            isTeamReviewRequest: true,
-            teamSlug: "crafters",
-            teamName: "Crafters",
-            isDraft: false,
-            timestamp: Date.now(),
-          };
-        }
-        return null;
-      });
-
       // Set up fetch mocks for API calls
       const mockFetch = vi.mocked(global.fetch);
 
@@ -346,12 +336,15 @@ describe("<App>", () => {
 
       // Set up the sequence of API calls
       mockFetch.mockImplementation((url) => {
-        if (url.toString().includes("/user")) {
-          return Promise.resolve(createMockResponse(mockUser));
-        }
-
         if (url.toString().includes("/user/teams")) {
           return Promise.resolve(createMockResponse(mockUserTeams));
+        }
+
+        if (
+          url.toString().includes("/user") &&
+          !url.toString().includes("/teams")
+        ) {
+          return Promise.resolve(createMockResponse(mockUser));
         }
 
         if (url.toString().includes("/notifications")) {
@@ -363,9 +356,12 @@ describe("<App>", () => {
           // Team review request
           return Promise.resolve(
             createMockResponse({
-              requested_reviewers: [],
-              requested_teams: [{ slug: "crafters", name: "Crafters" }],
+              state: "open",
               draft: false,
+              requested_reviewers: [],
+              requested_teams: [
+                { slug: "crafters", name: "Crafters", id: 233 },
+              ],
             })
           );
         }
@@ -403,18 +399,20 @@ describe("<App>", () => {
       // Wait for the notifications to load and render
       await waitFor(
         () => {
-          // Check for the Crafters section
-          const craftersSection = screen.getByText(/Crafters/);
-          expect(craftersSection).toBeDefined();
-          expect(craftersSection.textContent).toContain("(1)");
+          // Check for the Team Review Requests section
+          const teamRequestsSection = screen.getByText(/Team Review Requests/);
+          expect(teamRequestsSection).toBeDefined();
+          expect(teamRequestsSection.textContent).toContain("(1)");
         },
         { timeout: 10000 }
       );
 
-      // Click on the Crafters section to expand it
+      // Click on the Team Review Requests section to expand it
       const user = userEvent.setup();
-      const craftersSectionElement = await screen.findByText(/Crafters/);
-      await user.click(craftersSectionElement);
+      const teamRequestsElement = await screen.findByText(
+        /Team Review Requests/
+      );
+      await user.click(teamRequestsElement);
 
       // Now the content should be visible
       await waitFor(() => {
