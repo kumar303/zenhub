@@ -413,18 +413,7 @@ describe("<App>", () => {
         { timeout: 5000 }
       );
 
-      teamCache.clear();
-
       const user = userEvent.setup();
-      const refreshButton = await screen.findByText("Refresh");
-      await user.click(refreshButton);
-
-      await waitFor(
-        () => {
-          expect(screen.queryByText("Refreshing...")).toBeNull();
-        },
-        { timeout: 5000 }
-      );
 
       await waitFor(
         () => {

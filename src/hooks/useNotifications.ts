@@ -79,8 +79,11 @@ export function useNotifications(token: string | null) {
   const api = useMemo(() => (token ? new GitHubAPI(token) : null), [token]);
 
   const processNotifications = useCallback(
-    async (rawNotifications: GitHubNotification[]) => {
+    async (rawNotifications: GitHubNotification[], teams?: GitHubTeam[]) => {
       if (!api || !user) return [];
+
+      // Use passed teams or fall back to state
+      const effectiveTeams = teams ?? userTeams;
 
       // Group notifications by repository and subject
       const groups: Record<string, NotificationGroup> = {};
@@ -214,7 +217,7 @@ export function useNotifications(token: string | null) {
         notification: GitHubNotification;
       }> = [];
 
-      const userTeamSlugs = userTeams.map((team) => team.slug);
+      const userTeamSlugs = effectiveTeams.map((team) => team.slug);
 
       for (const group of Object.values(groups)) {
         if (group.hasReviewRequest && group.subject.type === "PullRequest") {
@@ -394,14 +397,15 @@ export function useNotifications(token: string | null) {
 
       return groupedArray;
     },
-    [api, user, userTeams]
+    [api, user]
   );
 
   const fetchNotifications = useCallback(
     async (
       page: number = 1,
       append: boolean = false,
-      isManualLoad: boolean = false
+      isManualLoad: boolean = false,
+      teams?: GitHubTeam[]
     ) => {
       if (!api) return;
 
@@ -469,7 +473,7 @@ export function useNotifications(token: string | null) {
         );
 
         // Process and group notifications
-        const processed = await processNotifications(filtered);
+        const processed = await processNotifications(filtered, teams);
 
         console.log(
           `[FetchNotifications] Processed ${processed.length} groups, dismissed list has ${dismissed.length} items`
@@ -692,14 +696,17 @@ export function useNotifications(token: string | null) {
         }
 
         // Fetch user teams
+        let loadedTeams: GitHubTeam[] | undefined;
         const cachedTeams = teamsCache.get();
         if (cachedTeams) {
+          loadedTeams = cachedTeams;
           if (mounted) {
             setUserTeams(cachedTeams);
           }
         } else {
           try {
             const teams = await api.getUserTeams();
+            loadedTeams = teams;
             if (mounted) {
               setUserTeams(teams);
               teamsCache.set(teams);
@@ -709,9 +716,9 @@ export function useNotifications(token: string | null) {
           }
         }
 
-        // Now fetch notifications
-        if (mounted) {
-          await fetchNotifications();
+        // Now fetch notifications with teams
+        if (mounted && loadedTeams) {
+          await fetchNotifications(1, false, false, loadedTeams);
         }
       } catch (err: any) {
         console.error("Initialization error:", err);
