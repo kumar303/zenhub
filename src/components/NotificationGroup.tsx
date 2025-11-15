@@ -1,11 +1,11 @@
 import { useState } from "preact/hooks";
 import type { NotificationGroup as NotificationGroupType } from "../types";
 import { formatDateTime } from "../utils/date";
+import { getSubjectUrl } from "../utils/url";
 
 interface NotificationGroupProps {
   group: NotificationGroupType;
   onDismiss: () => void;
-  getSubjectUrl: (subject: NotificationGroupType["subject"]) => string;
   onLinkClick: () => void;
   isClicked: boolean;
 }
@@ -31,7 +31,6 @@ function formatReason(reason: string): string {
 export function NotificationGroup({
   group,
   onDismiss,
-  getSubjectUrl,
   onLinkClick,
   isClicked,
 }: NotificationGroupProps) {

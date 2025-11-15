@@ -6,7 +6,6 @@ import { DebugModal } from "./components/DebugModal";
 import { useNotifications } from "./hooks/useNotifications";
 import { useClickedNotifications } from "./hooks/useClickedNotifications";
 import { STORAGE_KEYS } from "./config";
-import { getSubjectUrl } from "./utils/url";
 import { clearAllTeamCache } from "./utils/clearCache";
 
 export function App() {
@@ -363,7 +362,6 @@ export function App() {
                 key={group.id}
                 group={group}
                 onDismiss={() => dismissNotification(group.id)}
-                getSubjectUrl={getSubjectUrl}
                 onLinkClick={() => markAsClicked(group.id)}
                 isClicked={isClicked(group.id)}
               />
@@ -386,7 +384,6 @@ export function App() {
                 key={group.id}
                 group={group}
                 onDismiss={() => dismissNotification(group.id)}
-                getSubjectUrl={getSubjectUrl}
                 onLinkClick={() => markAsClicked(group.id)}
                 isClicked={isClicked(group.id)}
               />
@@ -410,7 +407,6 @@ export function App() {
                 key={group.id}
                 group={group}
                 onDismiss={() => dismissNotification(group.id)}
-                getSubjectUrl={getSubjectUrl}
                 onLinkClick={() => markAsClicked(group.id)}
                 isClicked={isClicked(group.id)}
               />
@@ -433,7 +429,6 @@ export function App() {
                 key={group.id}
                 group={group}
                 onDismiss={() => dismissNotification(group.id)}
-                getSubjectUrl={getSubjectUrl}
                 onLinkClick={() => markAsClicked(group.id)}
                 isClicked={isClicked(group.id)}
               />
@@ -456,7 +451,6 @@ export function App() {
                 key={group.id}
                 group={group}
                 onDismiss={() => dismissNotification(group.id)}
-                getSubjectUrl={getSubjectUrl}
                 onLinkClick={() => markAsClicked(group.id)}
                 isClicked={isClicked(group.id)}
               />
@@ -479,7 +473,6 @@ export function App() {
                 key={group.id}
                 group={group}
                 onDismiss={() => dismissNotification(group.id)}
-                getSubjectUrl={getSubjectUrl}
                 onLinkClick={() => markAsClicked(group.id)}
                 isClicked={isClicked(group.id)}
               />

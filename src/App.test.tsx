@@ -1,21 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/preact";
+import { render, screen, waitFor } from "@testing-library/preact";
+import userEvent from "@testing-library/user-event";
 import { App } from "./App";
 import type {
   GitHubUser,
   GitHubTeam,
   GitHubRepository,
-  NotificationGroup,
+  GitHubNotification,
 } from "./types";
 
 // Mock modules
-vi.mock("./hooks/useNotifications");
 vi.mock("./hooks/useClickedNotifications");
 vi.mock("./utils/url");
+vi.mock("./utils/teamCache");
 
 // Import mocked modules
-import { useNotifications } from "./hooks/useNotifications";
 import { useClickedNotifications } from "./hooks/useClickedNotifications";
+import { getSubjectUrl } from "./utils/url";
+import { teamCache } from "./utils/teamCache";
 
 // Mock user data
 const mockUser: GitHubUser = {
@@ -48,198 +50,376 @@ const mockRepository: GitHubRepository = {
   html_url: "https://github.com/test/test-repo",
 };
 
-// Helper to create NotificationGroup with sensible defaults
-const createNotificationGroup = (
-  overrides: Partial<NotificationGroup>
-): NotificationGroup => {
-  const defaults: NotificationGroup = {
-    id: "default-id",
-    repository: mockRepository,
-    subject: {
-      title: "Test notification",
-      url: "https://api.github.com/repos/test/test-repo/pulls/1",
-      type: "PullRequest",
-    },
-    notifications: [
-      {
-        id: "notif-1",
-        unread: true,
-        reason: "review_requested",
-        updated_at: "2025-11-14T10:00:00Z",
-        subject: {
-          title: "Test notification",
-          url: "https://api.github.com/repos/test/test-repo/pulls/1",
-          type: "PullRequest",
-        },
-        repository: mockRepository,
-        url: "https://api.github.com/notifications/threads/notif-1",
-        subscription_url:
-          "https://api.github.com/notifications/threads/notif-1/subscription",
-      },
-    ],
-    isOwnContent: false,
-    isProminentForMe: false,
-    hasReviewRequest: false,
-    isTeamReviewRequest: false,
-    hasMention: false,
-    hasReply: false,
-    hasTeamMention: false,
-    isDraftPR: false,
-  };
+// Helper to create NotificationGroup objects
 
-  return { ...defaults, ...overrides };
+// Mock localStorage
+const mockLocalStorage = {
+  data: {} as Record<string, string>,
+  getItem: vi.fn((key: string) => mockLocalStorage.data[key] || null),
+  setItem: vi.fn((key: string, value: string) => {
+    mockLocalStorage.data[key] = value;
+  }),
+  removeItem: vi.fn((key: string) => {
+    delete mockLocalStorage.data[key];
+  }),
+  clear: vi.fn(() => {
+    mockLocalStorage.data = {};
+  }),
+  key: vi.fn(),
+  length: 0,
 };
+
+global.localStorage = mockLocalStorage as any;
+
+// Helper to create mock fetch responses
+const createMockResponse = (data: any, status = 200): Response =>
+  ({
+    ok: status >= 200 && status < 300,
+    status,
+    statusText: status === 200 ? "OK" : "Error",
+    headers: new Headers({
+      "content-type": "application/json",
+    }),
+    redirected: false,
+    type: "basic" as ResponseType,
+    url: "",
+    json: async () => data,
+    text: async () => JSON.stringify(data),
+    clone: () => createMockResponse(data, status),
+    body: null,
+    bodyUsed: false,
+    arrayBuffer: async () => new ArrayBuffer(0),
+    blob: async () => new Blob([]),
+    formData: async () => new FormData(),
+  } as Response);
 
 describe("<App>", () => {
   beforeEach(() => {
-    // Reset mocks
+    // Clear all mocks
     vi.clearAllMocks();
+    mockLocalStorage.data = {};
 
-    // Setup localStorage with proper token key and clear caches
-    (global.localStorage as any)._setStore({
-      github_token: "test-token",
-    });
+    // Set up a logged-in state
+    mockLocalStorage.data["github_token"] = "test-token-123";
+    mockLocalStorage.data["github_user"] = JSON.stringify(mockUser);
 
-    // Mock useClickedNotifications
+    // Mock hooks and utilities
     vi.mocked(useClickedNotifications).mockReturnValue({
       markAsClicked: vi.fn(),
       isClicked: vi.fn(() => false),
     });
+
+    vi.mocked(getSubjectUrl).mockImplementation((subject) => {
+      return subject.url.replace("api.github.com/repos", "github.com");
+    });
+
+    // Mock team cache
+    vi.mocked(teamCache.get).mockReturnValue(null);
+    vi.mocked(teamCache.set).mockImplementation(() => {});
+
+    // Mock fetch globally
+    global.fetch = vi.fn();
   });
 
-  it("should render notifications with a direct author review request as Review Requests", () => {
-    // Setup: Create notifications with hasReviewRequest=true, isTeamReviewRequest=false
-    const directReviewRequest1 = createNotificationGroup({
-      id: "repo1#url1",
-      subject: {
-        title: "Add new API method",
-        url: "url1",
-        type: "PullRequest",
-      },
-      hasReviewRequest: true,
-      isTeamReviewRequest: false,
-    });
+  it(
+    "should render notifications with a direct author review request as Review Requests",
+    { timeout: 15000 },
+    async () => {
+      // Reset mocks for this test
+      vi.clearAllMocks();
 
-    const directReviewRequest2 = createNotificationGroup({
-      id: "repo2#url2",
-      subject: {
-        title: "Fix payment validation",
-        url: "url2",
-        type: "PullRequest",
-      },
-      hasReviewRequest: true,
-      isTeamReviewRequest: false,
-    });
+      // Set up fetch mocks for API calls
+      const mockFetch = vi.mocked(global.fetch);
 
-    // Setup: Create a notification that should NOT appear in Review Requests
-    const ownContentNotification = createNotificationGroup({
-      id: "repo3#url3",
-      subject: {
-        title: "Your own issue",
-        url: "url3",
-        type: "Issue",
-      },
-      hasReviewRequest: false,
-      isTeamReviewRequest: false,
-      isOwnContent: true,
-    });
+      // Create raw GitHub notification data
+      const mockNotifications: GitHubNotification[] = [
+        {
+          id: "notif-review-1",
+          unread: true,
+          reason: "review_requested",
+          updated_at: "2025-11-14T10:00:00Z",
+          subject: {
+            title: "Fix payment processing bug",
+            url: "https://api.github.com/repos/test/test-repo/pulls/100",
+            type: "PullRequest",
+          },
+          repository: mockRepository,
+          url: "https://api.github.com/notifications/threads/notif-review-1",
+          subscription_url:
+            "https://api.github.com/notifications/threads/notif-review-1/subscription",
+        },
+        {
+          id: "notif-review-2",
+          unread: true,
+          reason: "review_requested",
+          updated_at: "2025-11-14T09:00:00Z",
+          subject: {
+            title: "Add new feature flag system",
+            url: "https://api.github.com/repos/test/test-repo/pulls/101",
+            type: "PullRequest",
+          },
+          repository: mockRepository,
+          url: "https://api.github.com/notifications/threads/notif-review-2",
+          subscription_url:
+            "https://api.github.com/notifications/threads/notif-review-2/subscription",
+        },
+        {
+          id: "notif-author",
+          unread: true,
+          reason: "author",
+          updated_at: "2025-11-14T08:00:00Z",
+          subject: {
+            title: "My own PR",
+            url: "https://api.github.com/repos/test/test-repo/pulls/102",
+            type: "PullRequest",
+          },
+          repository: mockRepository,
+          url: "https://api.github.com/notifications/threads/notif-author",
+          subscription_url:
+            "https://api.github.com/notifications/threads/notif-author/subscription",
+        },
+      ];
 
-    vi.mocked(useNotifications).mockReturnValue({
-      notifications: [
-        directReviewRequest1,
-        directReviewRequest2,
-        ownContentNotification,
-      ],
-      user: mockUser,
-      userTeams: mockUserTeams,
-      loading: false,
-      error: null,
-      initialLoad: false,
-      refreshAllPages: vi.fn(),
-      dismissNotification: vi.fn(),
-      loadMore: vi.fn(),
-      hasMore: false,
-      loadingMore: false,
-      fetchNotifications: vi.fn(),
-    });
+      // Set up the sequence of API calls
+      mockFetch.mockImplementation((url) => {
+        if (
+          url.toString().includes("/user") &&
+          !url.toString().includes("/teams")
+        ) {
+          return Promise.resolve(createMockResponse(mockUser));
+        }
 
-    render(<App />);
+        if (url.toString().includes("/user/teams")) {
+          return Promise.resolve(createMockResponse(mockUserTeams));
+        }
 
-    const allReviewHeaders = screen.queryAllByText(/Review Requests/);
-    const reviewRequestsSection = allReviewHeaders.find(
-      (el) =>
-        el.textContent?.trim().startsWith("Review Requests") &&
-        el.classList.contains("gradient-green-red")
-    );
-    expect(reviewRequestsSection).toBeDefined();
-    expect(reviewRequestsSection).toBeInTheDocument();
-    expect(reviewRequestsSection?.textContent).toContain("(2)");
-  });
+        if (url.toString().includes("/notifications")) {
+          return Promise.resolve(createMockResponse(mockNotifications));
+        }
 
-  it("should render notifications without a direct request but with a team request as Team Review Requests", () => {
-    // Setup: Create notification with hasReviewRequest=true, isTeamReviewRequest=true, teamSlug set
-    const teamReviewRequest = createNotificationGroup({
-      id: "repo1#url1",
-      subject: {
-        title: "Add `children` property to `DropZone`",
-        url: "url1",
-        type: "PullRequest",
-      },
-      hasReviewRequest: true,
-      isTeamReviewRequest: true,
-      teamSlug: "crafters",
-      teamName: "Crafters",
-    });
+        // For PR details (checking if team review request)
+        if (url.toString().includes("/pulls/100")) {
+          return Promise.resolve(
+            createMockResponse({
+              state: "open",
+              draft: false,
+              requested_reviewers: [mockUser], // Direct user review for PR 100
+              requested_teams: [],
+            })
+          );
+        }
 
-    // Setup: Create notifications that should NOT appear in team section
-    const directReviewRequest = createNotificationGroup({
-      id: "repo2#url2",
-      subject: {
-        title: "Direct review",
-        url: "url2",
-        type: "PullRequest",
-      },
-      hasReviewRequest: true,
-      isTeamReviewRequest: false,
-    });
+        if (url.toString().includes("/pulls/101")) {
+          return Promise.resolve(
+            createMockResponse({
+              state: "open",
+              draft: false,
+              requested_reviewers: [mockUser], // Direct user review for PR 101
+              requested_teams: [],
+            })
+          );
+        }
 
-    const ownContentNotification = createNotificationGroup({
-      id: "repo3#url3",
-      subject: {
-        title: "Your own PR",
-        url: "url3",
-        type: "PullRequest",
-      },
-      hasReviewRequest: false,
-      isTeamReviewRequest: false,
-      isOwnContent: true,
-    });
+        if (url.toString().includes("/pulls/102")) {
+          return Promise.resolve(
+            createMockResponse({
+              state: "open",
+              draft: false,
+              requested_reviewers: [],
+              requested_teams: [],
+            })
+          );
+        }
 
-    vi.mocked(useNotifications).mockReturnValue({
-      notifications: [
-        teamReviewRequest,
-        directReviewRequest,
-        ownContentNotification,
-      ],
-      user: mockUser,
-      userTeams: mockUserTeams,
-      loading: false,
-      error: null,
-      initialLoad: false,
-      refreshAllPages: vi.fn(),
-      dismissNotification: vi.fn(),
-      loadMore: vi.fn(),
-      hasMore: false,
-      loadingMore: false,
-      fetchNotifications: vi.fn(),
-    });
+        // Default response
+        return Promise.resolve(createMockResponse({}));
+      });
 
-    render(<App />);
+      render(<App />);
 
-    // Look for any team section (should have team name in it)
-    const craftersSection = screen.queryByText(/Crafters/);
-    expect(craftersSection).toBeDefined();
-    expect(craftersSection).toBeInTheDocument();
-    expect(craftersSection?.textContent).toContain("(1)");
-  });
+      // Wait for the notifications to load and render
+      await waitFor(
+        () => {
+          // Find all elements containing "Review Requests"
+          const reviewRequestsElements = screen.getAllByText(/Review Requests/);
+
+          // Find the specific "Review Requests (2)" section
+          const reviewRequestsSection = reviewRequestsElements.find(
+            (el) =>
+              el.textContent?.trim().startsWith("Review Requests") &&
+              el.classList.contains("gradient-green-red")
+          );
+          expect(reviewRequestsSection).toBeDefined();
+          expect(reviewRequestsSection?.textContent).toContain("(2)");
+        },
+        { timeout: 10000 } // Give more time for async processing
+      );
+
+      // Click on the Review Requests section to expand it
+      const user = userEvent.setup();
+      const reviewRequestsHeader = await screen.findByRole("button", {
+        name: "Expand section",
+      });
+      await user.click(reviewRequestsHeader);
+
+      // Now the content should be visible
+      await waitFor(() => {
+        expect(screen.getByText("Fix payment processing bug")).toBeDefined();
+      });
+
+      expect(screen.getByText("Add new feature flag system")).toBeDefined();
+    }
+  );
+
+  it(
+    "should render notifications without a direct request but with a team request as Team Review Requests",
+    { timeout: 15000 },
+    async () => {
+      // Reset mocks for this test
+      vi.clearAllMocks();
+
+      // Set up team cache to return team info for the team review request
+      vi.mocked(teamCache.get).mockImplementation((notificationId) => {
+        if (notificationId === "notif-team-review") {
+          return {
+            isTeamReviewRequest: true,
+            teamSlug: "crafters",
+            teamName: "Crafters",
+            isDraft: false,
+            timestamp: Date.now(),
+          };
+        }
+        return null;
+      });
+
+      // Set up fetch mocks for API calls
+      const mockFetch = vi.mocked(global.fetch);
+
+      // Create raw GitHub notification data
+      const mockNotifications: GitHubNotification[] = [
+        {
+          id: "notif-team-review",
+          unread: true,
+          reason: "review_requested",
+          updated_at: "2025-11-14T10:00:00Z",
+          subject: {
+            title: "Update team documentation",
+            url: "https://api.github.com/repos/test/test-repo/pulls/200",
+            type: "PullRequest",
+          },
+          repository: mockRepository,
+          url: "https://api.github.com/notifications/threads/notif-team-review",
+          subscription_url:
+            "https://api.github.com/notifications/threads/notif-team-review/subscription",
+        },
+        {
+          id: "notif-direct-review",
+          unread: true,
+          reason: "review_requested",
+          updated_at: "2025-11-14T09:00:00Z",
+          subject: {
+            title: "Fix bug in checkout",
+            url: "https://api.github.com/repos/test/test-repo/pulls/201",
+            type: "PullRequest",
+          },
+          repository: mockRepository,
+          url: "https://api.github.com/notifications/threads/notif-direct-review",
+          subscription_url:
+            "https://api.github.com/notifications/threads/notif-direct-review/subscription",
+        },
+        {
+          id: "notif-author",
+          unread: true,
+          reason: "author",
+          updated_at: "2025-11-14T08:00:00Z",
+          subject: {
+            title: "My own PR",
+            url: "https://api.github.com/repos/test/test-repo/pulls/202",
+            type: "PullRequest",
+          },
+          repository: mockRepository,
+          url: "https://api.github.com/notifications/threads/notif-author",
+          subscription_url:
+            "https://api.github.com/notifications/threads/notif-author/subscription",
+        },
+      ];
+
+      // Set up the sequence of API calls
+      mockFetch.mockImplementation((url) => {
+        if (url.toString().includes("/user")) {
+          return Promise.resolve(createMockResponse(mockUser));
+        }
+
+        if (url.toString().includes("/user/teams")) {
+          return Promise.resolve(createMockResponse(mockUserTeams));
+        }
+
+        if (url.toString().includes("/notifications")) {
+          return Promise.resolve(createMockResponse(mockNotifications));
+        }
+
+        // For PR details - differentiate between team and direct review
+        if (url.toString().includes("/pulls/200")) {
+          // Team review request
+          return Promise.resolve(
+            createMockResponse({
+              requested_reviewers: [],
+              requested_teams: [{ slug: "crafters", name: "Crafters" }],
+              draft: false,
+            })
+          );
+        }
+
+        if (url.toString().includes("/pulls/201")) {
+          // Direct review request
+          return Promise.resolve(
+            createMockResponse({
+              state: "open",
+              draft: false,
+              requested_reviewers: [mockUser],
+              requested_teams: [],
+            })
+          );
+        }
+
+        if (url.toString().includes("/pulls/202")) {
+          // Author's own PR
+          return Promise.resolve(
+            createMockResponse({
+              state: "open",
+              draft: false,
+              requested_reviewers: [],
+              requested_teams: [],
+            })
+          );
+        }
+
+        // Default response
+        return Promise.resolve(createMockResponse({}));
+      });
+
+      render(<App />);
+
+      // Wait for the notifications to load and render
+      await waitFor(
+        () => {
+          // Check for the Crafters section
+          const craftersSection = screen.getByText(/Crafters/);
+          expect(craftersSection).toBeDefined();
+          expect(craftersSection.textContent).toContain("(1)");
+        },
+        { timeout: 10000 }
+      );
+
+      // Click on the Crafters section to expand it
+      const user = userEvent.setup();
+      const craftersSectionElement = await screen.findByText(/Crafters/);
+      await user.click(craftersSectionElement);
+
+      // Now the content should be visible
+      await waitFor(() => {
+        expect(screen.getByText("Update team documentation")).toBeDefined();
+      });
+    }
+  );
 });
