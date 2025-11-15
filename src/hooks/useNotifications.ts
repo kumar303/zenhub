@@ -1,4 +1,10 @@
-import { useState, useEffect, useCallback, useMemo } from "preact/hooks";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "preact/hooks";
 import { GitHubAPI } from "../api";
 import { STORAGE_KEYS } from "../config";
 import { stateCache } from "../utils/stateCache";
@@ -781,8 +787,8 @@ export function useNotifications(token: string | null) {
     // Delay setting up the interval to avoid circular dependency
     setTimeout(() => {
       refreshInterval = setInterval(() => {
-        if (mounted && currentPage > 0) {
-          refreshAllPages();
+        if (mounted && currentPage > 0 && refreshAllPagesRef.current) {
+          refreshAllPagesRef.current();
         }
       }, 60000); // Every minute
     }, 0);
@@ -815,6 +821,9 @@ export function useNotifications(token: string | null) {
       });
     }
   }, [currentPage, hasMore, loadingMore, fetchNotifications]);
+
+  // Use a ref to ensure the interval always calls the latest refreshAllPages
+  const refreshAllPagesRef = useRef<() => Promise<void>>();
 
   // Refresh all currently loaded pages
   const refreshAllPages = useCallback(async () => {
@@ -935,7 +944,14 @@ export function useNotifications(token: string | null) {
     checkForNewProminentNotifications,
     dismissed,
     notifications,
+    user,
+    userTeams,
   ]);
+
+  // Update the ref whenever refreshAllPages changes
+  useEffect(() => {
+    refreshAllPagesRef.current = refreshAllPages;
+  }, [refreshAllPages]);
 
   return {
     notifications,

@@ -179,7 +179,7 @@ location.reload();
             const parsed = JSON.parse(dismissed);
             return {
               count: parsed.length,
-              sample: parsed.slice(0, 5),
+              all: parsed,
               hasNumericIds: parsed.some((id: any) => /^\d+$/.test(id)),
             };
           } catch (e) {
@@ -187,6 +187,22 @@ location.reload();
           }
         })(),
       },
+      dismissedVsDisplayed: (() => {
+        const dismissed = localStorage.getItem("dismissed_notifications");
+        if (!dismissed) return "no dismissed items";
+        try {
+          const dismissedList = JSON.parse(dismissed);
+          const displayedIds = notifications.map((n) => n.id);
+          const shouldBeHidden = displayedIds.filter((id) => dismissedList.includes(id));
+          return {
+            dismissedCount: dismissedList.length,
+            displayedCount: notifications.length,
+            incorrectlyShowing: shouldBeHidden,
+          };
+        } catch (e) {
+          return "error";
+        }
+      })(),
       stateCache: (() => {
         const stateCache = localStorage.getItem("github_state_cache");
         if (!stateCache) return "empty";
