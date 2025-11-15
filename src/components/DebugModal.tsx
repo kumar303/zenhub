@@ -1,7 +1,6 @@
-import { useState, useEffect, useRef } from "preact/hooks";
+import { useState, useEffect } from "preact/hooks";
 import type { NotificationGroup, GitHubTeam } from "../types";
 import { CACHE_KEYS } from "../config/cacheKeys";
-import { clearAllTeamCache } from "../utils/clearCache";
 
 interface DebugModalProps {
   isOpen: boolean;
@@ -20,29 +19,6 @@ export function DebugModal({
 }: DebugModalProps) {
   const [debugData, setDebugData] = useState("");
   const [capturedLogs, setCapturedLogs] = useState<string[]>([]);
-  const [showMenu, setShowMenu] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  // Handle click outside for menu
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setShowMenu(false);
-      }
-    }
-    if (showMenu) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () =>
-        document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [showMenu]);
-
-  // Reset menu when modal closes
-  useEffect(() => {
-    if (!isOpen) {
-      setShowMenu(false);
-    }
-  }, [isOpen]);
 
   // Capture console logs when modal is open
   useEffect(() => {
@@ -267,52 +243,6 @@ location.reload();
     }
   };
 
-  const handleClearProblemCaches = () => {
-    try {
-      const data = JSON.parse(debugData);
-      if (
-        !data.problemNotifications ||
-        data.problemNotifications.length === 0
-      ) {
-        alert("No problem notifications found to clear.");
-        return;
-      }
-
-      const cacheKey = CACHE_KEYS.TEAM_CACHE;
-      const cacheData = localStorage.getItem(cacheKey);
-      if (!cacheData) {
-        alert("No cache found.");
-        return;
-      }
-
-      const cache = JSON.parse(cacheData);
-      let clearedCount = 0;
-
-      for (const problem of data.problemNotifications) {
-        if (cache.data && cache.data[problem.notificationId]) {
-          delete cache.data[problem.notificationId];
-          clearedCount++;
-          console.log(
-            `Cleared cache for: ${problem.title} (${problem.notificationId})`
-          );
-        }
-      }
-
-      localStorage.setItem(cacheKey, JSON.stringify(cache));
-
-      if (clearedCount > 0) {
-        alert(
-          `Cleared cache for ${clearedCount} notifications. Page will reload.`
-        );
-        location.reload();
-      } else {
-        alert("No cached entries found for problem notifications.");
-      }
-    } catch (err) {
-      console.error("Failed to clear caches:", err);
-      alert("Failed to clear caches. Check console for details.");
-    }
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
@@ -356,160 +286,6 @@ location.reload();
           >
             Close
           </button>
-          <div className="relative" ref={menuRef}>
-            <button
-              onClick={() => setShowMenu(!showMenu)}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
-              title="Actions menu"
-            >
-              <span>Actions</span>
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
-                />
-              </svg>
-            </button>
-
-            {showMenu && (
-              <div className="absolute bottom-full right-0 mb-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                {debugData &&
-                  (() => {
-                    try {
-                      const data = JSON.parse(debugData);
-                      if (
-                        data.problemNotifications &&
-                        data.problemNotifications.length > 0
-                      ) {
-                        return (
-                          <>
-                            <div className="px-4 py-2 text-sm font-semibold text-gray-500 border-b border-gray-200">
-                              Clear Problem Caches
-                            </div>
-                            {data.problemNotifications.map(
-                              (problem: any, index: number) => (
-                                <button
-                                  key={index}
-                                  onClick={() => {
-                                    const cacheKey = CACHE_KEYS.TEAM_CACHE;
-                                    const cache = JSON.parse(
-                                      localStorage.getItem(cacheKey) ||
-                                        '{"data":{}}'
-                                    );
-                                    if (
-                                      cache.data &&
-                                      cache.data[problem.notificationId]
-                                    ) {
-                                      delete cache.data[problem.notificationId];
-                                      localStorage.setItem(
-                                        cacheKey,
-                                        JSON.stringify(cache)
-                                      );
-                                      console.log(
-                                        `Cleared cache for: ${problem.title}`
-                                      );
-                                      location.reload();
-                                    } else {
-                                      alert(
-                                        `No cache found for: ${problem.title}`
-                                      );
-                                    }
-                                  }}
-                                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
-                                >
-                                  Clear: {problem.title.substring(0, 40)}...
-                                </button>
-                              )
-                            )}
-                            <div className="border-b border-gray-200 my-1"></div>
-                          </>
-                        );
-                      }
-                      return null;
-                    } catch (e) {
-                      return null;
-                    }
-                  })()}
-
-                <button
-                  onClick={handleClearProblemCaches}
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
-                >
-                  Clear All Problem Caches
-                </button>
-                <button
-                  onClick={() => {
-                    clearAllTeamCache();
-                    alert("Team cache cleared. Page will reload.");
-                    location.reload();
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
-                >
-                  Clear All Team Cache
-                </button>
-                <button
-                  onClick={() => {
-                    localStorage.removeItem("dismissed_notifications");
-                    alert("Dismissed notifications cleared. Page will reload.");
-                    location.reload();
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
-                >
-                  Clear Dismissed Notifications
-                </button>
-                <button
-                  onClick={() => {
-                    localStorage.setItem("debug_team_reviews", "true");
-                    alert("Verbose logging enabled. Page will reload.");
-                    location.reload();
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
-                >
-                  Enable Verbose Logging
-                </button>
-                <button
-                  onClick={() => {
-                    localStorage.removeItem("debug_team_reviews");
-                    alert("Verbose logging disabled. Page will reload.");
-                    location.reload();
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
-                >
-                  Disable Verbose Logging
-                </button>
-                <div className="border-b border-gray-200 my-1"></div>
-                <button
-                  onClick={() => {
-                    // Get the token to preserve it
-                    const token = localStorage.getItem("github_token");
-
-                    // Clear all localStorage
-                    localStorage.clear();
-
-                    // Restore the token
-                    if (token) {
-                      localStorage.setItem("github_token", token);
-                    }
-
-                    alert(
-                      "All caches cleared (token preserved). Page will reload."
-                    );
-                    location.reload();
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700 text-red-600 font-semibold"
-                >
-                  Clear All Caches (Keep Login)
-                </button>
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>

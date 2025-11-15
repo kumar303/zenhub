@@ -6,7 +6,6 @@ import { DebugModal } from "./components/DebugModal";
 import { useNotifications } from "./hooks/useNotifications";
 import { useClickedNotifications } from "./hooks/useClickedNotifications";
 import { STORAGE_KEYS } from "./config";
-import { clearAllTeamCache } from "./utils/clearCache";
 
 export function App() {
   const [token, setToken] = useState<string | null>(() =>
@@ -292,21 +291,24 @@ export function App() {
                       </button>
                       <button
                         onClick={() => {
-                          if (
-                            confirm(
-                              "Clear all team review cache? This will force fresh API checks."
-                            )
-                          ) {
-                            clearAllTeamCache();
-                            alert(
-                              "Cache cleared! Refresh the page to see changes."
+                          const currentToken = localStorage.getItem(
+                            STORAGE_KEYS.TOKEN
+                          );
+                          localStorage.clear();
+                          if (currentToken) {
+                            localStorage.setItem(
+                              STORAGE_KEYS.TOKEN,
+                              currentToken
                             );
                           }
-                          setShowMenu(false);
+                          alert(
+                            "All caches cleared (login preserved). Page will reload."
+                          );
+                          location.reload();
                         }}
                         className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700 border-t border-gray-200"
                       >
-                        Clear Cache
+                        Clear All Caches (Keep Login)
                       </button>
                     </div>
                   )}
