@@ -694,4 +694,81 @@ describe("<App>", () => {
     ).toBeNull();
     expect(screen.queryByText(/Mentions/)).toBeNull();
   });
+
+  it("should not show closed or merged PRs", async () => {
+    vi.clearAllMocks();
+
+    // Pre-populate stateCache with an "open" state from 5 minutes ago
+    // This simulates the case where the PR was cached as open but is now closed
+    const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+    localStorage.setItem(
+      "github_state_cache",
+      JSON.stringify({
+        "https://api.github.com/repos/Shopify/ui-api-design/pulls/1219": {
+          state: "open",
+          timestamp: fiveMinutesAgo,
+        },
+      })
+    );
+
+    const closedPR: GitHubNotification = {
+      id: "18384250345",
+      unread: true,
+      reason: "review_requested",
+      updated_at: "2025-11-02T21:02:09Z",
+      last_read_at: undefined,
+      subject: {
+        title: "Replace `@see` with markdown links so they show on shopify.dev",
+        url: "https://api.github.com/repos/Shopify/ui-api-design/pulls/1219",
+        type: "PullRequest",
+        latest_comment_url: undefined,
+      },
+      repository: {
+        id: 1,
+        name: "ui-api-design",
+        full_name: "Shopify/ui-api-design",
+        owner: {
+          login: "Shopify",
+          id: 1,
+          avatar_url: "https://avatars.githubusercontent.com/u/1",
+          url: "https://api.github.com/users/Shopify",
+          html_url: "https://github.com/Shopify",
+        },
+        html_url: "https://github.com/Shopify/ui-api-design",
+        description: "UI API Design",
+      },
+      url: "https://api.github.com/notifications/18384250345",
+      subscription_url:
+        "https://api.github.com/notifications/threads/18384250345",
+    };
+
+    setupMockApi({
+      notifications: [closedPR],
+      pullRequests: {
+        "/pulls/1219": {
+          state: "closed",
+          draft: false,
+          requested_reviewers: [],
+          requested_teams: [{ slug: "ui-api-tag", name: "UI API TAG", id: 1 }],
+        },
+      },
+    });
+
+    render(<App />);
+
+    await waitFor(
+      () => {
+        expect(screen.queryByText("Refreshing...")).toBeNull();
+      },
+      { timeout: 5000 }
+    );
+
+    // The closed PR should not be visible
+    expect(
+      screen.queryByText(
+        "Replace `@see` with markdown links so they show on shopify.dev"
+      )
+    ).toBeNull();
+    expect(screen.queryByText(/Team Review Requests/)).toBeNull();
+  });
 });

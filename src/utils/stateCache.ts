@@ -1,6 +1,6 @@
 // Cache for issue/PR states to avoid repeated API calls
 const STATE_CACHE_KEY = "github_state_cache";
-const CACHE_DURATION = 6 * 60 * 60 * 1000; // 6 hours - shorter for better accuracy
+const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes for fresh state
 
 interface CachedState {
   state: string;
