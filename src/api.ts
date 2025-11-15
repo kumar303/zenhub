@@ -68,9 +68,10 @@ export class GitHubAPI {
 
     try {
       return await this.request<SubjectDetails>(url);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to fetch subject details:", error);
-      return null;
+      // Re-throw the error so caller can handle 404s specially
+      throw error;
     }
   }
 

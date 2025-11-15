@@ -118,10 +118,18 @@ export function useNotifications(token: string | null) {
               stateCache.set(url, details.state);
             }
           })
-          .catch(() => {
-            console.error("Failed to fetch state for:", url);
-            // Cache as "unknown" to avoid repeated failed fetches
-            stateCache.set(url, "unknown");
+          .catch((err) => {
+            console.error("Failed to fetch state for:", url, err);
+            // If it's a 404, the issue/PR was deleted - cache as "deleted" to hide it
+            if (
+              err.message &&
+              (err.message.includes("404") || err.message.includes("Not Found"))
+            ) {
+              stateCache.set(url, "deleted");
+            } else {
+              // Cache as "unknown" to avoid repeated failed fetches
+              stateCache.set(url, "unknown");
+            }
           });
         fetchPromises.push(fetchPromise);
       }
@@ -133,13 +141,13 @@ export function useNotifications(token: string | null) {
       for (const notification of rawNotifications) {
         const key = `${notification.repository.full_name}#${notification.subject.url}`;
 
-        // Check if closed/merged (from cache or fresh fetch)
+        // Check if closed/merged/deleted (from cache or fresh fetch)
         if (
           notification.subject.type === "Issue" ||
           notification.subject.type === "PullRequest"
         ) {
           if (stateCache.isClosedOrMerged(notification.subject.url)) {
-            continue; // Skip closed/merged items
+            continue; // Skip closed/merged/deleted items
           }
         }
 

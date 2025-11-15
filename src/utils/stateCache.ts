@@ -67,7 +67,7 @@ export class StateCache {
     const state = this.get(url);
     // Don't filter out unknown states - better to show them than hide them
     if (state === "unknown") return false;
-    return state === "closed" || state === "merged";
+    return state === "closed" || state === "merged" || state === "deleted";
   }
 
   clear() {
