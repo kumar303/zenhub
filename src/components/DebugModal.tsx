@@ -197,9 +197,10 @@ location.reload();
             state: data.state,
             age: Math.round((Date.now() - data.timestamp) / 1000 / 60) + " minutes",
           }));
+
           return {
             count: entries.length,
-            entries: entries.slice(0, 10), // Show first 10 entries
+            entries: entries.slice(0, 10),
           };
         } catch (e) {
           return "invalid";

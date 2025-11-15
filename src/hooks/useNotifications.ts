@@ -111,12 +111,12 @@ export function useNotifications(token: string | null) {
         }
       }
 
-      // Batch fetch states for URLs not in cache (limit to 20 at a time to avoid rate limits)
+      // Batch fetch states for URLs not in cache
       const urlArray = Array.from(urlsToCheck);
       const fetchPromises: Promise<void>[] = [];
 
-      // Process in parallel but limit concurrency
-      for (let i = 0; i < urlArray.length && i < 20; i++) {
+      // Fetch all URLs in parallel
+      for (let i = 0; i < urlArray.length; i++) {
         const url = urlArray[i];
         const fetchPromise = api
           .getSubjectDetails(url)

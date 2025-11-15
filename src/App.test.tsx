@@ -900,4 +900,60 @@ describe("<App>", () => {
     expect(screen.queryByText("No notifications! 🎉")).toBeNull();
     expect(screen.queryByText(/Review Requests/)).toBeDefined();
   });
+
+  it("should filter out 404 notifications even when there are more than 20 URLs to check", async () => {
+    vi.clearAllMocks();
+    stateCache.clear();
+
+    // Create 25 notifications, last one will be a 404
+    const notifications: GitHubNotification[] = [];
+    for (let i = 1; i <= 25; i++) {
+      notifications.push({
+        id: `notif-${i}`,
+        unread: true,
+        reason: i === 25 ? "mention" : "comment",
+        updated_at: "2025-11-14T10:00:00Z",
+        last_read_at: undefined,
+        subject: {
+          title: i === 25 ? "This will 404" : `Issue ${i}`,
+          url: `https://api.github.com/repos/test/test-repo/issues/${i}`,
+          type: "Issue",
+          latest_comment_url: undefined,
+        },
+        repository: {
+          id: 1,
+          name: "test-repo",
+          full_name: "test/test-repo",
+          owner: {
+            login: "test",
+            id: 1,
+            avatar_url: "https://avatars.githubusercontent.com/u/1",
+            url: "https://api.github.com/users/test",
+            html_url: "https://github.com/test",
+          },
+          html_url: "https://github.com/test/test-repo",
+          description: "Test repository",
+        },
+        url: `https://api.github.com/notifications/notif-${i}`,
+        subscription_url: `https://api.github.com/notifications/threads/notif-${i}`,
+      });
+    }
+
+    setupMockApi({
+      notifications,
+      notFoundUrls: ["/issues/25"],
+    });
+
+    render(<App />);
+
+    await waitFor(
+      () => {
+        expect(screen.queryByText("Refreshing...")).toBeNull();
+      },
+      { timeout: 5000 }
+    );
+
+    // The 404'd notification (25th) should not be visible
+    expect(screen.queryByText("This will 404")).toBeNull();
+  });
 });
