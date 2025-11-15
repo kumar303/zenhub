@@ -81,8 +81,8 @@ export function useNotifications(token: string | null) {
   const processNotifications = useCallback(
     async (
       rawNotifications: GitHubNotification[],
-      teams?: GitHubTeam[],
-      userData?: GitHubUser
+      teams: GitHubTeam[] | undefined,
+      userData: GitHubUser | undefined
     ) => {
       // Use passed user or fall back to state
       const effectiveUser = userData ?? user;
@@ -420,8 +420,8 @@ export function useNotifications(token: string | null) {
       page: number = 1,
       append: boolean = false,
       isManualLoad: boolean = false,
-      teams?: GitHubTeam[],
-      userData?: GitHubUser
+      teams: GitHubTeam[] | undefined,
+      userData: GitHubUser | undefined
     ) => {
       if (!api) return;
 
@@ -799,7 +799,13 @@ export function useNotifications(token: string | null) {
     if (!loadingMore && hasMore && currentPage < 10) {
       // Limit to 10 pages max (500 notifications)
       // Pass isManualLoad = true to prevent web notifications
-      await fetchNotifications(currentPage + 1, true, true);
+      await fetchNotifications(
+        currentPage + 1,
+        true,
+        true,
+        userTeams,
+        user ?? undefined
+      );
     }
   }, [currentPage, hasMore, loadingMore, fetchNotifications]);
 
