@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/preact";
 import userEvent from "@testing-library/user-event";
 import { App } from "./App";
@@ -193,266 +193,235 @@ describe("<App>", () => {
     global.fetch = vi.fn();
   });
 
-  it(
-    "should render notifications with a direct author review request as Review Requests",
-    { timeout: 15000 },
-    async () => {
-      vi.clearAllMocks();
+  afterEach(() => {
+    // Ensure timers are restored after each test
+    vi.useRealTimers();
+  });
 
-      setupMockApi({
-        notifications: [
-          {
-            id: "notif-review-1",
-            unread: true,
-            reason: "review_requested",
-            updated_at: "2025-11-14T10:00:00Z",
-            subject: {
-              title: "Fix payment processing bug",
-              url: "https://api.github.com/repos/test/test-repo/pulls/100",
-              type: "PullRequest",
-            },
-            repository: mockRepository,
-            url: "https://api.github.com/notifications/threads/notif-review-1",
-            subscription_url:
-              "https://api.github.com/notifications/threads/notif-review-1/subscription",
+  it("should render notifications with a direct author review request as Review Requests", async () => {
+    setupMockApi({
+      notifications: [
+        {
+          id: "notif-review-1",
+          unread: true,
+          reason: "review_requested",
+          updated_at: "2025-11-14T10:00:00Z",
+          subject: {
+            title: "Fix payment processing bug",
+            url: "https://api.github.com/repos/test/test-repo/pulls/100",
+            type: "PullRequest",
           },
-          {
-            id: "notif-review-2",
-            unread: true,
-            reason: "review_requested",
-            updated_at: "2025-11-14T09:00:00Z",
-            subject: {
-              title: "Add new feature flag system",
-              url: "https://api.github.com/repos/test/test-repo/pulls/101",
-              type: "PullRequest",
-            },
-            repository: mockRepository,
-            url: "https://api.github.com/notifications/threads/notif-review-2",
-            subscription_url:
-              "https://api.github.com/notifications/threads/notif-review-2/subscription",
-          },
-          {
-            id: "notif-author",
-            unread: true,
-            reason: "author",
-            updated_at: "2025-11-14T08:00:00Z",
-            subject: {
-              title: "My own PR",
-              url: "https://api.github.com/repos/test/test-repo/pulls/102",
-              type: "PullRequest",
-            },
-            repository: mockRepository,
-            url: "https://api.github.com/notifications/threads/notif-author",
-            subscription_url:
-              "https://api.github.com/notifications/threads/notif-author/subscription",
-          },
-        ],
-        pullRequests: {
-          "/pulls/100": { requested_reviewers: [mockUser] },
-          "/pulls/101": { requested_reviewers: [mockUser] },
+          repository: mockRepository,
+          url: "https://api.github.com/notifications/threads/notif-review-1",
+          subscription_url:
+            "https://api.github.com/notifications/threads/notif-review-1/subscription",
         },
-      });
-
-      render(<App />);
-
-      await waitFor(
-        () => {
-          // Find all elements containing "Review Requests"
-          const reviewRequestsElements = screen.getAllByText(/Review Requests/);
-
-          // Find the specific "Review Requests (2)" section
-          const reviewRequestsSection = reviewRequestsElements.find(
-            (el) =>
-              el.textContent?.trim().startsWith("Review Requests") &&
-              el.classList.contains("gradient-green-red")
-          );
-          expect(reviewRequestsSection).toBeDefined();
-          expect(reviewRequestsSection?.textContent).toContain("(2)");
+        {
+          id: "notif-review-2",
+          unread: true,
+          reason: "review_requested",
+          updated_at: "2025-11-14T09:00:00Z",
+          subject: {
+            title: "Add new feature flag system",
+            url: "https://api.github.com/repos/test/test-repo/pulls/101",
+            type: "PullRequest",
+          },
+          repository: mockRepository,
+          url: "https://api.github.com/notifications/threads/notif-review-2",
+          subscription_url:
+            "https://api.github.com/notifications/threads/notif-review-2/subscription",
         },
-        { timeout: 10000 } // Give more time for async processing
+        {
+          id: "notif-author",
+          unread: true,
+          reason: "author",
+          updated_at: "2025-11-14T08:00:00Z",
+          subject: {
+            title: "My own PR",
+            url: "https://api.github.com/repos/test/test-repo/pulls/102",
+            type: "PullRequest",
+          },
+          repository: mockRepository,
+          url: "https://api.github.com/notifications/threads/notif-author",
+          subscription_url:
+            "https://api.github.com/notifications/threads/notif-author/subscription",
+        },
+      ],
+      pullRequests: {
+        "/pulls/100": { requested_reviewers: [mockUser] },
+        "/pulls/101": { requested_reviewers: [mockUser] },
+      },
+    });
+
+    render(<App />);
+
+    await waitFor(() => {
+      // Find all elements containing "Review Requests"
+      const reviewRequestsElements = screen.getAllByText(/Review Requests/);
+
+      // Find the specific "Review Requests (2)" section
+      const reviewRequestsSection = reviewRequestsElements.find(
+        (el) =>
+          el.textContent?.trim().startsWith("Review Requests") &&
+          el.classList.contains("gradient-green-red")
       );
+      expect(reviewRequestsSection).toBeDefined();
+      expect(reviewRequestsSection?.textContent).toContain("(2)");
+    });
 
-      const user = userEvent.setup();
-      const reviewRequestsHeader = await screen.findByRole("button", {
-        name: "Expand section",
-      });
-      await user.click(reviewRequestsHeader);
+    const user = userEvent.setup();
+    const reviewRequestsHeader = await screen.findByRole("button", {
+      name: "Expand section",
+    });
+    await user.click(reviewRequestsHeader);
 
-      await waitFor(() => {
-        expect(screen.getByText("Fix payment processing bug")).toBeDefined();
-      });
+    await waitFor(() => {
+      expect(screen.getByText("Fix payment processing bug")).toBeDefined();
+    });
 
-      expect(screen.getByText("Add new feature flag system")).toBeDefined();
-    }
-  );
+    expect(screen.getByText("Add new feature flag system")).toBeDefined();
+  });
 
-  it(
-    "should render notifications without a direct request but with an unknown team request as Team Review Requests",
-    { timeout: 15000 },
-    async () => {
-      vi.clearAllMocks();
-
-      setupMockApi({
-        notifications: [
-          {
-            id: "notif-team-review",
-            unread: true,
-            reason: "review_requested",
-            updated_at: "2025-11-14T10:00:00Z",
-            subject: {
-              title: "Update team documentation",
-              url: "https://api.github.com/repos/test/test-repo/pulls/200",
-              type: "PullRequest",
-            },
-            repository: mockRepository,
-            url: "https://api.github.com/notifications/threads/notif-team-review",
-            subscription_url:
-              "https://api.github.com/notifications/threads/notif-team-review/subscription",
+  it("should render notifications without a direct request but with an unknown team request as Team Review Requests", async () => {
+    setupMockApi({
+      notifications: [
+        {
+          id: "notif-team-review",
+          unread: true,
+          reason: "review_requested",
+          updated_at: "2025-11-14T10:00:00Z",
+          subject: {
+            title: "Update team documentation",
+            url: "https://api.github.com/repos/test/test-repo/pulls/200",
+            type: "PullRequest",
           },
-          {
-            id: "notif-direct-review",
-            unread: true,
-            reason: "review_requested",
-            updated_at: "2025-11-14T09:00:00Z",
-            subject: {
-              title: "Fix bug in checkout",
-              url: "https://api.github.com/repos/test/test-repo/pulls/201",
-              type: "PullRequest",
-            },
-            repository: mockRepository,
-            url: "https://api.github.com/notifications/threads/notif-direct-review",
-            subscription_url:
-              "https://api.github.com/notifications/threads/notif-direct-review/subscription",
-          },
-          {
-            id: "notif-author",
-            unread: true,
-            reason: "author",
-            updated_at: "2025-11-14T08:00:00Z",
-            subject: {
-              title: "My own PR",
-              url: "https://api.github.com/repos/test/test-repo/pulls/202",
-              type: "PullRequest",
-            },
-            repository: mockRepository,
-            url: "https://api.github.com/notifications/threads/notif-author",
-            subscription_url:
-              "https://api.github.com/notifications/threads/notif-author/subscription",
-          },
-        ],
-        pullRequests: {
-          "/pulls/200": {
-            requested_teams: [
-              { slug: "unknown-team", name: "Unknown Team", id: 999 },
-            ],
-          },
-          "/pulls/201": { requested_reviewers: [mockUser] },
+          repository: mockRepository,
+          url: "https://api.github.com/notifications/threads/notif-team-review",
+          subscription_url:
+            "https://api.github.com/notifications/threads/notif-team-review/subscription",
         },
-      });
-
-      render(<App />);
-
-      await waitFor(
-        () => {
-          const teamRequestsSection = screen.getByText(/Team Review Requests/);
-          expect(teamRequestsSection).toBeDefined();
-          expect(teamRequestsSection.textContent).toContain("(1)");
+        {
+          id: "notif-direct-review",
+          unread: true,
+          reason: "review_requested",
+          updated_at: "2025-11-14T09:00:00Z",
+          subject: {
+            title: "Fix bug in checkout",
+            url: "https://api.github.com/repos/test/test-repo/pulls/201",
+            type: "PullRequest",
+          },
+          repository: mockRepository,
+          url: "https://api.github.com/notifications/threads/notif-direct-review",
+          subscription_url:
+            "https://api.github.com/notifications/threads/notif-direct-review/subscription",
         },
-        { timeout: 10000 }
-      );
-
-      const user = userEvent.setup();
-      const teamRequestsElement = await screen.findByText(
-        /Team Review Requests/
-      );
-      await user.click(teamRequestsElement);
-
-      await waitFor(() => {
-        expect(screen.getByText("Update team documentation")).toBeDefined();
-      });
-    }
-  );
-
-  it(
-    "should render notifications without a direct request but with a team request that I am a part of as the team name",
-    { timeout: 15000 },
-    async () => {
-      vi.clearAllMocks();
-
-      setupMockApi({
-        teams: [
-          {
-            id: 233,
-            node_id: "node_233",
-            slug: "crafters",
-            name: "Crafters",
-            organization: {
-              login: "shopify",
-              id: 1,
-              avatar_url: "https://avatars.githubusercontent.com/u/1",
-            },
+        {
+          id: "notif-author",
+          unread: true,
+          reason: "author",
+          updated_at: "2025-11-14T08:00:00Z",
+          subject: {
+            title: "My own PR",
+            url: "https://api.github.com/repos/test/test-repo/pulls/202",
+            type: "PullRequest",
           },
-        ],
-        notifications: [
-          {
-            id: "notif-crafters-review",
-            unread: true,
-            reason: "review_requested",
-            updated_at: "2025-11-14T10:00:00Z",
-            subject: {
-              title: "Add widget stewardship feature",
-              url: "https://api.github.com/repos/test/test-repo/pulls/300",
-              type: "PullRequest",
-            },
-            repository: mockRepository,
-            url: "https://api.github.com/notifications/threads/notif-crafters-review",
-            subscription_url:
-              "https://api.github.com/notifications/threads/notif-crafters-review/subscription",
-          },
-        ],
-        pullRequests: {
-          "/pulls/300": {
-            requested_teams: [{ slug: "crafters", name: "Crafters", id: 233 }],
+          repository: mockRepository,
+          url: "https://api.github.com/notifications/threads/notif-author",
+          subscription_url:
+            "https://api.github.com/notifications/threads/notif-author/subscription",
+        },
+      ],
+      pullRequests: {
+        "/pulls/200": {
+          requested_teams: [
+            { slug: "unknown-team", name: "Unknown Team", id: 999 },
+          ],
+        },
+        "/pulls/201": { requested_reviewers: [mockUser] },
+      },
+    });
+
+    render(<App />);
+
+    await waitFor(() => {
+      const teamRequestsSection = screen.getByText(/Team Review Requests/);
+      expect(teamRequestsSection).toBeDefined();
+      expect(teamRequestsSection.textContent).toContain("(1)");
+    });
+
+    const user = userEvent.setup();
+    const teamRequestsElement = await screen.findByText(/Team Review Requests/);
+    await user.click(teamRequestsElement);
+
+    await waitFor(() => {
+      expect(screen.getByText("Update team documentation")).toBeDefined();
+    });
+  });
+
+  it("should render notifications without a direct request but with a team request that I am a part of as the team name", async () => {
+    setupMockApi({
+      teams: [
+        {
+          id: 233,
+          node_id: "node_233",
+          slug: "crafters",
+          name: "Crafters",
+          organization: {
+            login: "shopify",
+            id: 1,
+            avatar_url: "https://avatars.githubusercontent.com/u/1",
           },
         },
-      });
-
-      render(<App />);
-
-      await waitFor(
-        () => {
-          expect(screen.queryByText("Refreshing...")).toBeNull();
+      ],
+      notifications: [
+        {
+          id: "notif-crafters-review",
+          unread: true,
+          reason: "review_requested",
+          updated_at: "2025-11-14T10:00:00Z",
+          subject: {
+            title: "Add widget stewardship feature",
+            url: "https://api.github.com/repos/test/test-repo/pulls/300",
+            type: "PullRequest",
+          },
+          repository: mockRepository,
+          url: "https://api.github.com/notifications/threads/notif-crafters-review",
+          subscription_url:
+            "https://api.github.com/notifications/threads/notif-crafters-review/subscription",
         },
-        { timeout: 5000 }
-      );
-
-      const user = userEvent.setup();
-
-      await waitFor(
-        () => {
-          const craftersSection = screen.queryByText(/^Crafters/);
-          if (!craftersSection) {
-            throw new Error("Crafters section not found");
-          }
-          expect(craftersSection.textContent).toContain("(1)");
+      ],
+      pullRequests: {
+        "/pulls/300": {
+          requested_teams: [{ slug: "crafters", name: "Crafters", id: 233 }],
         },
-        { timeout: 10000 }
-      );
+      },
+    });
 
-      const craftersSectionElement = await screen.findByText(/Crafters/);
-      await user.click(craftersSectionElement);
+    render(<App />);
 
-      await waitFor(() => {
-        expect(
-          screen.getByText("Add widget stewardship feature")
-        ).toBeDefined();
-      });
-    }
-  );
+    await waitFor(() => {
+      expect(screen.queryByText("Refreshing...")).toBeNull();
+    });
+
+    const user = userEvent.setup();
+
+    await waitFor(() => {
+      const craftersSection = screen.queryByText(/^Crafters/);
+      if (!craftersSection) {
+        throw new Error("Crafters section not found");
+      }
+      expect(craftersSection.textContent).toContain("(1)");
+    });
+
+    const craftersSectionElement = await screen.findByText(/Crafters/);
+    await user.click(craftersSectionElement);
+
+    await waitFor(() => {
+      expect(screen.getByText("Add widget stewardship feature")).toBeDefined();
+    });
+  });
 
   it("should not show dismissed notifications after refresh", async () => {
-    vi.clearAllMocks();
-
     // Pre-populate dismissed notifications in localStorage
     localStorage.setItem(
       "dismissed_notifications",
@@ -499,12 +468,9 @@ describe("<App>", () => {
 
     render(<App />);
 
-    await waitFor(
-      () => {
-        expect(screen.queryByText("Refreshing...")).toBeNull();
-      },
-      { timeout: 5000 }
-    );
+    await waitFor(() => {
+      expect(screen.queryByText("Refreshing...")).toBeNull();
+    });
 
     // The notification should not be visible since it's already dismissed
     expect(
@@ -516,8 +482,6 @@ describe("<App>", () => {
   });
 
   it("should keep notifications dismissed across page reloads", async () => {
-    vi.clearAllMocks();
-
     const mentionNotification: GitHubNotification = {
       id: "19199998390",
       unread: true,
@@ -556,12 +520,9 @@ describe("<App>", () => {
 
     const { unmount } = render(<App />);
 
-    await waitFor(
-      () => {
-        expect(screen.queryByText("Refreshing...")).toBeNull();
-      },
-      { timeout: 5000 }
-    );
+    await waitFor(() => {
+      expect(screen.queryByText("Refreshing...")).toBeNull();
+    });
 
     // Check that the notification is initially visible
     const user = userEvent.setup();
@@ -594,12 +555,9 @@ describe("<App>", () => {
 
     render(<App />);
 
-    await waitFor(
-      () => {
-        expect(screen.queryByText("Refreshing...")).toBeNull();
-      },
-      { timeout: 5000 }
-    );
+    await waitFor(() => {
+      expect(screen.queryByText("Refreshing...")).toBeNull();
+    });
 
     // The notification should not be visible after reload
     expect(
@@ -611,8 +569,6 @@ describe("<App>", () => {
   });
 
   it("should keep notifications dismissed even when notification ID changes", async () => {
-    vi.clearAllMocks();
-
     // Pre-populate dismissed notifications in localStorage
     localStorage.setItem(
       "dismissed_notifications",
@@ -660,12 +616,9 @@ describe("<App>", () => {
 
     render(<App />);
 
-    await waitFor(
-      () => {
-        expect(screen.queryByText("Refreshing...")).toBeNull();
-      },
-      { timeout: 5000 }
-    );
+    await waitFor(() => {
+      expect(screen.queryByText("Refreshing...")).toBeNull();
+    });
 
     // The notification should not be visible since it's already dismissed
     expect(
@@ -692,12 +645,9 @@ describe("<App>", () => {
     const refreshButton = screen.getByText("Refresh");
     await user.click(refreshButton);
 
-    await waitFor(
-      () => {
-        expect(screen.queryByText("Refreshing...")).toBeNull();
-      },
-      { timeout: 5000 }
-    );
+    await waitFor(() => {
+      expect(screen.queryByText("Refreshing...")).toBeNull();
+    });
 
     // The notification should still not be visible because we group by repo#issue URL
     expect(
@@ -709,8 +659,6 @@ describe("<App>", () => {
   });
 
   it("should not show closed or merged PRs", async () => {
-    vi.clearAllMocks();
-
     // Pre-populate stateCache with an "open" state from 5 minutes ago
     // This simulates the case where the PR was cached as open but is now closed
     const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
@@ -769,12 +717,9 @@ describe("<App>", () => {
 
     render(<App />);
 
-    await waitFor(
-      () => {
-        expect(screen.queryByText("Refreshing...")).toBeNull();
-      },
-      { timeout: 5000 }
-    );
+    await waitFor(() => {
+      expect(screen.queryByText("Refreshing...")).toBeNull();
+    });
 
     // The closed PR should not be visible
     expect(
@@ -786,8 +731,6 @@ describe("<App>", () => {
   });
 
   it("should hide notifications that return 404 from API", async () => {
-    vi.clearAllMocks();
-
     const deletedIssue: GitHubNotification = {
       id: "19199998390",
       unread: true,
@@ -827,12 +770,9 @@ describe("<App>", () => {
 
     render(<App />);
 
-    await waitFor(
-      () => {
-        expect(screen.queryByText("Refreshing...")).toBeNull();
-      },
-      { timeout: 5000 }
-    );
+    await waitFor(() => {
+      expect(screen.queryByText("Refreshing...")).toBeNull();
+    });
 
     // The 404'd notification should not be visible
     expect(
@@ -844,8 +784,6 @@ describe("<App>", () => {
   });
 
   it("should show notifications after clearing cache", async () => {
-    vi.clearAllMocks();
-
     const reviewRequestPR: GitHubNotification = {
       id: "notif-review",
       unread: true,
@@ -892,12 +830,9 @@ describe("<App>", () => {
 
     render(<App />);
 
-    await waitFor(
-      () => {
-        expect(screen.queryByText("Refreshing...")).toBeNull();
-      },
-      { timeout: 5000 }
-    );
+    await waitFor(() => {
+      expect(screen.queryByText("Refreshing...")).toBeNull();
+    });
 
     // Should show notifications even though user cache was cleared
     expect(screen.queryByText("No notifications! 🎉")).toBeNull();
@@ -905,9 +840,6 @@ describe("<App>", () => {
   });
 
   it("should filter out 404 notifications even when there are more than 20 URLs to check", async () => {
-    vi.clearAllMocks();
-    stateCache.clear();
-
     // Create 25 notifications, last one will be a 404
     const notifications: GitHubNotification[] = [];
     for (let i = 1; i <= 25; i++) {
@@ -949,12 +881,9 @@ describe("<App>", () => {
 
     render(<App />);
 
-    await waitFor(
-      () => {
-        expect(screen.queryByText("Refreshing...")).toBeNull();
-      },
-      { timeout: 5000 }
-    );
+    await waitFor(() => {
+      expect(screen.queryByText("Refreshing...")).toBeNull();
+    });
 
     // The 404'd notification (25th) should not be visible
     expect(screen.queryByText("This will 404")).toBeNull();
@@ -1006,12 +935,9 @@ describe("<App>", () => {
 
     render(<App />);
 
-    await waitFor(
-      () => {
-        expect(screen.queryByText("Refreshing...")).toBeNull();
-      },
-      { timeout: 5000 }
-    );
+    await waitFor(() => {
+      expect(screen.queryByText("Refreshing...")).toBeNull();
+    });
 
     // Should show notification initially
     expect(screen.queryByText("No notifications! 🎉")).toBeNull();
@@ -1024,29 +950,25 @@ describe("<App>", () => {
       expect(screen.getByText("Timer test PR")).toBeDefined();
     });
 
+    // Now switch to fake timers to simulate the automatic refresh
+    vi.useFakeTimers();
+
     // Simulate the automatic refresh timer firing
     // First the setTimeout(0), then the setInterval(60000)
-    vi.useFakeTimers();
     vi.advanceTimersByTime(1); // Trigger setTimeout
     vi.advanceTimersByTime(60000); // Trigger setInterval
 
     await vi.runAllTimersAsync();
     vi.useRealTimers();
 
-    await waitFor(
-      () => {
-        // Should still show notifications after timer refresh
-        expect(screen.queryByText("Timer test PR")).toBeDefined();
-      },
-      { timeout: 5000 }
-    );
+    await waitFor(() => {
+      // Should still show notifications after timer refresh
+      expect(screen.queryByText("Timer test PR")).toBeDefined();
+    });
   });
 
   it("should send web notifications only for newly received notifications after refresh", async () => {
     vi.clearAllMocks();
-    stateCache.clear();
-    teamCache.clear();
-    teamsCache.clear();
 
     // Clear any existing Notification mock
     delete (global as any).Notification;
@@ -1091,12 +1013,9 @@ describe("<App>", () => {
     render(<App />);
 
     // Wait for initial load
-    await waitFor(
-      () => {
-        expect(screen.queryByText("Refreshing...")).toBeNull();
-      },
-      { timeout: 5000 }
-    );
+    await waitFor(() => {
+      expect(screen.queryByText("Refreshing...")).toBeNull();
+    });
 
     // No notifications should be sent on initial load
     expect(mockNotification).not.toHaveBeenCalled();
@@ -1140,12 +1059,9 @@ describe("<App>", () => {
     await user.click(refreshButton);
 
     // Wait for refresh to complete
-    await waitFor(
-      () => {
-        expect(screen.queryByText("Refreshing...")).toBeNull();
-      },
-      { timeout: 5000 }
-    );
+    await waitFor(() => {
+      expect(screen.queryByText("Refreshing...")).toBeNull();
+    });
 
     // Verify notification was called only for the new notification
     await waitFor(() => {
@@ -1169,12 +1085,9 @@ describe("<App>", () => {
     await user.click(menuButton);
     await user.click(refreshButton);
 
-    await waitFor(
-      () => {
-        expect(screen.queryByText("Refreshing...")).toBeNull();
-      },
-      { timeout: 5000 }
-    );
+    await waitFor(() => {
+      expect(screen.queryByText("Refreshing...")).toBeNull();
+    });
 
     // No new notifications should be sent
     expect(mockNotification).not.toHaveBeenCalled();
