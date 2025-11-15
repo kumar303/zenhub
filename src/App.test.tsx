@@ -274,7 +274,7 @@ describe("<App>", () => {
   );
 
   it(
-    "should render notifications without a direct request but with a team request as Team Review Requests",
+    "should render notifications without a direct request but with an unknown team request as Team Review Requests",
     { timeout: 15000 },
     async () => {
       vi.clearAllMocks();
@@ -329,7 +329,9 @@ describe("<App>", () => {
         ],
         pullRequests: {
           "/pulls/200": {
-            requested_teams: [{ slug: "crafters", name: "Crafters", id: 233 }],
+            requested_teams: [
+              { slug: "unknown-team", name: "Unknown Team", id: 999 },
+            ],
           },
           "/pulls/201": { requested_reviewers: [mockUser] },
         },
@@ -354,6 +356,94 @@ describe("<App>", () => {
 
       await waitFor(() => {
         expect(screen.getByText("Update team documentation")).toBeDefined();
+      });
+    }
+  );
+
+  it(
+    "should render notifications without a direct request but with a team request that I am a part of as the team name",
+    { timeout: 15000 },
+    async () => {
+      vi.clearAllMocks();
+
+      setupMockApi({
+        teams: [
+          {
+            id: 233,
+            node_id: "node_233",
+            slug: "crafters",
+            name: "Crafters",
+            organization: {
+              login: "shopify",
+              id: 1,
+              avatar_url: "https://avatars.githubusercontent.com/u/1",
+            },
+          },
+        ],
+        notifications: [
+          {
+            id: "notif-crafters-review",
+            unread: true,
+            reason: "review_requested",
+            updated_at: "2025-11-14T10:00:00Z",
+            subject: {
+              title: "Add widget stewardship feature",
+              url: "https://api.github.com/repos/test/test-repo/pulls/300",
+              type: "PullRequest",
+            },
+            repository: mockRepository,
+            url: "https://api.github.com/notifications/threads/notif-crafters-review",
+            subscription_url:
+              "https://api.github.com/notifications/threads/notif-crafters-review/subscription",
+          },
+        ],
+        pullRequests: {
+          "/pulls/300": {
+            requested_teams: [{ slug: "crafters", name: "Crafters", id: 233 }],
+          },
+        },
+      });
+
+      render(<App />);
+
+      await waitFor(
+        () => {
+          expect(screen.queryByText("Refreshing...")).toBeNull();
+        },
+        { timeout: 5000 }
+      );
+
+      teamCache.clear();
+
+      const user = userEvent.setup();
+      const refreshButton = await screen.findByText("Refresh");
+      await user.click(refreshButton);
+
+      await waitFor(
+        () => {
+          expect(screen.queryByText("Refreshing...")).toBeNull();
+        },
+        { timeout: 5000 }
+      );
+
+      await waitFor(
+        () => {
+          const craftersSection = screen.queryByText(/^Crafters/);
+          if (!craftersSection) {
+            throw new Error("Crafters section not found");
+          }
+          expect(craftersSection.textContent).toContain("(1)");
+        },
+        { timeout: 10000 }
+      );
+
+      const craftersSectionElement = await screen.findByText(/Crafters/);
+      await user.click(craftersSectionElement);
+
+      await waitFor(() => {
+        expect(
+          screen.getByText("Add widget stewardship feature")
+        ).toBeDefined();
       });
     }
   );
