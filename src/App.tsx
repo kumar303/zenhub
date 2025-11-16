@@ -201,21 +201,108 @@ export function App() {
 
   return (
     <div className="min-h-screen">
+      {/* VHS SVG Filters */}
+      <svg className="vhs-filters" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="vhs-tracking-line">
+            {/* Create horizontal noise for the distortion */}
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.02 0.001"
+              numOctaves="1"
+              result="noise"
+              seed="2"
+            />
+
+            {/* Create a moving gradient mask */}
+            <linearGradient
+              id="scan-gradient"
+              x1="0%"
+              y1="0%"
+              x2="0%"
+              y2="100%"
+            >
+              <stop offset="0%" stopColor="black" stopOpacity="1" />
+              <stop offset="48%" stopColor="black" stopOpacity="1" />
+              <stop offset="50%" stopColor="white" stopOpacity="1" />
+              <stop offset="52%" stopColor="black" stopOpacity="1" />
+              <stop offset="100%" stopColor="black" stopOpacity="1" />
+              <animateTransform
+                attributeName="gradientTransform"
+                type="translate"
+                from="0 -1"
+                to="0 1"
+                dur="20s"
+                repeatCount="indefinite"
+              />
+            </linearGradient>
+
+            {/* Apply the gradient as a mask */}
+            <rect
+              width="100%"
+              height="200%"
+              fill="url(#scan-gradient)"
+              result="mask"
+              y="-50%"
+            />
+
+            {/* Use the mask to selectively apply distortion */}
+            <feComposite
+              in="noise"
+              in2="mask"
+              operator="multiply"
+              result="maskedNoise"
+            />
+
+            {/* Apply the distortion */}
+            <feDisplacementMap
+              in="SourceGraphic"
+              in2="maskedNoise"
+              scale="15"
+              xChannelSelector="R"
+              yChannelSelector="B"
+            />
+          </filter>
+        </defs>
+      </svg>
+
+      {/* Static noise overlay */}
+      <div className="static-overlay" />
+
+      {/* VHS Loading Screen */}
+      {initialLoad && (
+        <div className="vhs-loading">
+          <div className="vhs-test-pattern">
+            <div className="vhs-test-bar" />
+            <div className="vhs-test-bar" />
+            <div className="vhs-test-bar" />
+            <div className="vhs-test-bar" />
+            <div className="vhs-test-bar" />
+            <div className="vhs-test-bar" />
+            <div className="vhs-test-bar" />
+          </div>
+          <div className="vhs-loading-text vhs-text">LOADING</div>
+        </div>
+      )}
+
       {/* Sticky header */}
-      <header ref={headerRef} className="sticky top-0 z-50 bg-white">
+      <header
+        ref={headerRef}
+        className="sticky top-0 z-50 bg-black/90 border-b-2 border-cyan-500"
+      >
         <div
-          className={`relative border-b border-gray-200 transition-all duration-300 ${
-            isScrolled ? "py-2 shadow-md header-shadow" : "py-4"
+          className={`relative transition-all duration-300 ${
+            isScrolled ? "py-2" : "py-4"
           }`}
         >
           <div className="container mx-auto px-4 max-w-6xl">
             <div className="flex items-center justify-between">
               <h1
-                className={`font-bold gradient-olympic gradient-text transition-all duration-300 ${
+                className={`font-bold vhs-text vhs-glitch transition-all duration-300 ${
                   isScrolled ? "text-2xl" : "text-4xl"
                 }`}
               >
-                Zenhub
+                ZENHUB
               </h1>
               <div className="flex items-center gap-4">
                 {user && (
@@ -237,19 +324,19 @@ export function App() {
                 <button
                   onClick={() => refreshAllPages()}
                   disabled={loading}
-                  className={`gradient-blue-yellow text-white font-medium rounded-xl hover:shadow-lg transition-all duration-200 disabled:opacity-50 ${
+                  className={`vhs-button vhs-transition ${
                     isScrolled ? "py-1.5 px-3 text-sm" : "py-2 px-4"
                   }`}
                 >
-                  {loading ? "Refreshing..." : "Refresh"}
+                  {loading ? "REFRESHING..." : "REFRESH"}
                 </button>
                 <button
                   onClick={handleLogout}
-                  className={`bg-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-300 transition-all duration-200 ${
+                  className={`vhs-button vhs-transition ${
                     isScrolled ? "py-1.5 px-3 text-sm" : "py-2 px-4"
                   }`}
                 >
-                  Logout
+                  LOGOUT
                 </button>
 
                 {/* Kebab Menu */}
@@ -354,7 +441,6 @@ export function App() {
           <CollapsibleSection
             title="Review Requests"
             count={reviewRequests.length}
-            gradientClass="gradient-green-red gradient-text"
             isOpen={expandedSection === "review-requests"}
             onToggle={() => handleSectionToggle("review-requests")}
             isNavScrolled={isScrolled}
@@ -376,7 +462,6 @@ export function App() {
           <CollapsibleSection
             title="Mentions & Replies"
             count={mentionsAndReplies.length}
-            gradientClass="gradient-blue-yellow gradient-text"
             isOpen={expandedSection === "mentions-replies"}
             onToggle={() => handleSectionToggle("mentions-replies")}
             isNavScrolled={isScrolled}
@@ -399,7 +484,6 @@ export function App() {
             key={teamSlug}
             title={teamData.teamName}
             count={teamData.groups.length}
-            gradientClass="gradient-green-blue gradient-text"
             isOpen={expandedSection === `team-${teamSlug}`}
             onToggle={() => handleSectionToggle(`team-${teamSlug}`)}
             isNavScrolled={isScrolled}
@@ -421,7 +505,6 @@ export function App() {
           <CollapsibleSection
             title="Your Activity"
             count={ownContent.length}
-            gradientClass="gradient-purple-blue gradient-text"
             isOpen={expandedSection === "your-activity"}
             onToggle={() => handleSectionToggle("your-activity")}
             isNavScrolled={isScrolled}
@@ -443,7 +526,6 @@ export function App() {
           <CollapsibleSection
             title="Needs Your Attention"
             count={needsAttention.length}
-            gradientClass="gradient-olympic gradient-text"
             isOpen={expandedSection === "needs-attention"}
             onToggle={() => handleSectionToggle("needs-attention")}
             isNavScrolled={isScrolled}
@@ -465,7 +547,6 @@ export function App() {
           <CollapsibleSection
             title="Other Notifications"
             count={others.length}
-            gradientClass="text-gray-700"
             isOpen={expandedSection === "other"}
             onToggle={() => handleSectionToggle("other")}
             isNavScrolled={isScrolled}

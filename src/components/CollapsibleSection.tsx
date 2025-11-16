@@ -3,7 +3,6 @@ import { ComponentChildren } from "preact";
 interface CollapsibleSectionProps {
   title: string;
   count: number;
-  gradientClass?: string;
   isOpen: boolean;
   onToggle: () => void;
   isNavScrolled?: boolean;
@@ -13,7 +12,6 @@ interface CollapsibleSectionProps {
 export function CollapsibleSection({
   title,
   count,
-  gradientClass = "text-gray-700",
   isOpen,
   onToggle,
   isNavScrolled = false,
@@ -23,39 +21,27 @@ export function CollapsibleSection({
   const topPosition = isNavScrolled ? "top-[53px]" : "top-[73px]";
 
   return (
-    <section className="animate-fade-in">
+    <section className={`animate-fade-in ${isOpen ? "section-expanding" : ""}`}>
       <div
-        className={`sticky ${topPosition} z-40 bg-white py-3 mb-4 -mx-4 px-4 cursor-pointer select-none border-b border-gray-200`}
+        className={`sticky ${topPosition} z-40 bg-black/80 backdrop-blur-sm py-3 mb-4 -mx-4 px-4 cursor-pointer select-none border-b-2 border-cyan-500`}
         onClick={onToggle}
       >
         <div className="flex items-center justify-between">
-          <h2 className={`text-2xl font-bold ${gradientClass}`}>
-            {title}{" "}
+          <h2 className={`text-2xl font-bold vhs-text section-header`}>
+            {title.toUpperCase()}{" "}
             {count > 0 && (
-              <span className="text-lg font-normal text-gray-500">
-                ({count})
+              <span className="text-lg font-normal">
+                [{count}]
               </span>
             )}
           </h2>
           <button
-            className="text-gray-500 hover:text-gray-700 transition-colors duration-200 p-2"
+            className="text-cyan-500 hover:text-magenta-500 transition-colors duration-200 p-2"
             aria-label={isOpen ? "Collapse section" : "Expand section"}
           >
-            <svg
-              className={`w-5 h-5 transform transition-transform duration-200 ${
-                isOpen ? "rotate-180" : ""
-              }`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
+            <span className="vhs-text text-2xl font-bold">
+              {isOpen ? "[-]" : "[+]"}
+            </span>
           </button>
         </div>
       </div>

@@ -257,16 +257,16 @@ describe("<App>", () => {
 
     await waitFor(() => {
       // Find all elements containing "Review Requests"
-      const reviewRequestsElements = screen.getAllByText(/Review Requests/);
+      const reviewRequestsElements = screen.getAllByText(/REVIEW REQUESTS/);
 
       // Find the specific "Review Requests (2)" section
       const reviewRequestsSection = reviewRequestsElements.find(
         (el) =>
-          el.textContent?.trim().startsWith("Review Requests") &&
-          el.classList.contains("gradient-green-red")
+          el.textContent?.trim().startsWith("REVIEW REQUESTS") &&
+          el.classList.contains("vhs-text")
       );
       expect(reviewRequestsSection).toBeDefined();
-      expect(reviewRequestsSection?.textContent).toContain("(2)");
+      expect(reviewRequestsSection?.textContent).toContain("[2]");
     });
 
     const user = userEvent.setup();
@@ -344,13 +344,13 @@ describe("<App>", () => {
     render(<App />);
 
     await waitFor(() => {
-      const teamRequestsSection = screen.getByText(/Team Review Requests/);
+      const teamRequestsSection = screen.getByText(/TEAM REVIEW REQUESTS/);
       expect(teamRequestsSection).toBeDefined();
-      expect(teamRequestsSection.textContent).toContain("(1)");
+      expect(teamRequestsSection.textContent).toContain("[1]");
     });
 
     const user = userEvent.setup();
-    const teamRequestsElement = await screen.findByText(/Team Review Requests/);
+    const teamRequestsElement = await screen.findByText(/TEAM REVIEW REQUESTS/);
     await user.click(teamRequestsElement);
 
     await waitFor(() => {
@@ -406,14 +406,14 @@ describe("<App>", () => {
     const user = userEvent.setup();
 
     await waitFor(() => {
-      const craftersSection = screen.queryByText(/^Crafters/);
+      const craftersSection = screen.queryByText(/^CRAFTERS/);
       if (!craftersSection) {
         throw new Error("Crafters section not found");
       }
-      expect(craftersSection.textContent).toContain("(1)");
+      expect(craftersSection.textContent).toContain("[1]");
     });
 
-    const craftersSectionElement = await screen.findByText(/Crafters/);
+    const craftersSectionElement = await screen.findByText(/CRAFTERS/);
     await user.click(craftersSectionElement);
 
     await waitFor(() => {
@@ -521,12 +521,16 @@ describe("<App>", () => {
     const { unmount } = render(<App />);
 
     await waitFor(() => {
+      expect(screen.queryByText("LOADING")).toBeNull();
+    });
+
+    await waitFor(() => {
       expect(screen.queryByText("Refreshing...")).toBeNull();
     });
 
     // Check that the notification is initially visible
     const user = userEvent.setup();
-    const mentionsSection = screen.getByText(/Mentions/);
+    const mentionsSection = screen.getByText(/MENTIONS & REPLIES/);
     await user.click(mentionsSection);
 
     await waitFor(() => {
@@ -641,8 +645,14 @@ describe("<App>", () => {
       notifications: [mentionNotification2],
     });
 
+    // Wait for app to render
+    await waitFor(() => {
+      const refreshBtn = screen.queryByText("REFRESH");
+      expect(refreshBtn).toBeTruthy();
+    });
+
     const user = userEvent.setup();
-    const refreshButton = screen.getByText("Refresh");
+    const refreshButton = screen.getByText("REFRESH");
     await user.click(refreshButton);
 
     await waitFor(() => {
@@ -727,7 +737,7 @@ describe("<App>", () => {
         "Replace `@see` with markdown links so they show on shopify.dev"
       )
     ).toBeNull();
-    expect(screen.queryByText(/Team Review Requests/)).toBeNull();
+    expect(screen.queryByText(/TEAM REVIEW REQUESTS/)).toBeNull();
   });
 
   it("should hide notifications that return 404 from API", async () => {
@@ -836,7 +846,7 @@ describe("<App>", () => {
 
     // Should show notifications even though user cache was cleared
     expect(screen.queryByText("No notifications! 🎉")).toBeNull();
-    expect(screen.queryByText(/Review Requests/)).toBeDefined();
+    expect(screen.queryByText(/REVIEW REQUESTS/)).toBeDefined();
   });
 
   it("should filter out 404 notifications even when there are more than 20 URLs to check", async () => {
@@ -936,6 +946,10 @@ describe("<App>", () => {
     render(<App />);
 
     await waitFor(() => {
+      expect(screen.queryByText("LOADING")).toBeNull();
+    });
+
+    await waitFor(() => {
       expect(screen.queryByText("Refreshing...")).toBeNull();
     });
 
@@ -943,7 +957,7 @@ describe("<App>", () => {
     expect(screen.queryByText("No notifications! 🎉")).toBeNull();
 
     const user = userEvent.setup();
-    const reviewRequestsSection = screen.getByText(/Review Requests/);
+    const reviewRequestsSection = screen.getByText(/^REVIEW REQUESTS/);
     await user.click(reviewRequestsSection);
 
     await waitFor(() => {
@@ -1014,6 +1028,10 @@ describe("<App>", () => {
 
     // Wait for initial load
     await waitFor(() => {
+      expect(screen.queryByText("LOADING")).toBeNull();
+    });
+
+    await waitFor(() => {
       expect(screen.queryByText("Refreshing...")).toBeNull();
     });
 
@@ -1052,10 +1070,7 @@ describe("<App>", () => {
     });
 
     // Click refresh button
-    const menuButton = screen.getByRole("button", { name: /More options/i });
-    await user.click(menuButton);
-
-    const refreshButton = screen.getByText("Refresh");
+    const refreshButton = screen.getByText("REFRESH");
     await user.click(refreshButton);
 
     // Wait for refresh to complete
@@ -1082,7 +1097,6 @@ describe("<App>", () => {
 
     // Refresh again without new notifications - should not send any
     mockNotification.mockClear();
-    await user.click(menuButton);
     await user.click(refreshButton);
 
     await waitFor(() => {

@@ -2,80 +2,320 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom gradients */
-.gradient-olympic {
-  background: linear-gradient(
-    135deg,
-    #0081c8 0%,
-    #fcb131 25%,
-    #00a651 50%,
-    #ee334e 75%,
-    #a020f0 100%
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+/* VHS Color Variables */
+:root {
+  --vhs-blue: #0066ff;
+  --vhs-purple: #9933ff;
+  --vhs-cyan: #00ffff;
+  --vhs-magenta: #ff00ff;
+  --vhs-yellow: #ffff00;
+  --vhs-green: #00ff00;
+  --vhs-red: #ff0000;
+  --vhs-white: #ffffff;
+  --vhs-black: #000000;
+  --vhs-dark-blue: #001a4d;
+  --vhs-dark-purple: #330066;
+}
+
+/* Base VHS Styling */
+body {
+  font-family: 'Share Tech Mono', monospace;
+  background: var(--vhs-dark-blue);
+  color: var(--vhs-white);
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Animated gradient background */
+body::before {
+  content: '';
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(ellipse at center,
+    var(--vhs-dark-blue) 0%,
+    var(--vhs-dark-purple) 50%,
+    var(--vhs-dark-blue) 100%);
+  animation: vhs-glow 8s ease-in-out infinite;
+  z-index: -1;
+}
+
+@keyframes vhs-glow {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 1; }
+  50% { transform: translate(10px, -10px) scale(1.05); opacity: 0.9; }
+}
+
+/* VHS SVG Filters */
+svg.vhs-filters {
+  position: fixed;
+  width: 0;
+  height: 0;
+}
+
+/* Apply VHS effects to entire page */
+#root {
+  position: relative;
+  filter: url(#vhs-tracking-line);
+}
+
+/* Scan lines overlay */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 2px,
+    rgba(0, 0, 0, 0.2) 2px,
+    rgba(0, 0, 0, 0.2) 4px
   );
+  pointer-events: none;
+  z-index: 9999;
+  /* Removed animation to prevent flicker */
 }
 
-.gradient-blue-yellow {
-  background: linear-gradient(135deg, #0081c8 0%, #fcb131 100%);
+/* Removed scan-lines animation to prevent flicker */
+
+/* VHS Text Style with Outline */
+.vhs-text {
+  text-shadow:
+    -2px -2px 0 var(--vhs-black),
+    2px -2px 0 var(--vhs-black),
+    -2px 2px 0 var(--vhs-black),
+    2px 2px 0 var(--vhs-black),
+    0 0 10px var(--vhs-cyan);
+  color: var(--vhs-white);
+  letter-spacing: 0.1em;
 }
 
-.gradient-green-red {
-  background: linear-gradient(135deg, #00a651 0%, #ee334e 100%);
+/* Section Headers */
+.section-header {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  position: relative;
 }
 
-.gradient-purple-blue {
-  background: linear-gradient(135deg, #a020f0 0%, #0081c8 100%);
+/* Color burst animation for expanding sections */
+@keyframes color-burst {
+  0% {
+    background: linear-gradient(90deg,
+      var(--vhs-cyan) 0%,
+      var(--vhs-magenta) 50%,
+      var(--vhs-yellow) 100%);
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleX(1);
+    opacity: 0;
+  }
 }
 
+.section-expanding::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  animation: color-burst 0.6s ease-out;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Loading Screen - VHS Test Pattern */
+.vhs-loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--vhs-black);
+  z-index: 9999;
+  display: flex;
+}
+
+.vhs-test-pattern {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+.vhs-test-bar {
+  flex: 1;
+  height: 100%;
+}
+
+.vhs-test-bar:nth-child(1) { background: var(--vhs-white); }
+.vhs-test-bar:nth-child(2) { background: var(--vhs-yellow); }
+.vhs-test-bar:nth-child(3) { background: var(--vhs-cyan); }
+.vhs-test-bar:nth-child(4) { background: var(--vhs-green); }
+.vhs-test-bar:nth-child(5) { background: var(--vhs-magenta); }
+.vhs-test-bar:nth-child(6) { background: var(--vhs-red); }
+.vhs-test-bar:nth-child(7) { background: var(--vhs-blue); }
+
+.vhs-loading-text {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 2rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  background: var(--vhs-black);
+  padding: 10px 20px;
+  animation: vhs-flicker 0.5s infinite;
+}
+
+@keyframes vhs-flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+/* Button Styles */
+.vhs-button {
+  background: var(--vhs-dark-blue);
+  border: 2px solid var(--vhs-cyan);
+  color: var(--vhs-cyan);
+  padding: 8px 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+.vhs-button:hover {
+  background: var(--vhs-cyan);
+  color: var(--vhs-black);
+  box-shadow: 0 0 20px var(--vhs-cyan);
+}
+
+.vhs-button:active {
+  transform: scale(0.95);
+}
+
+/* Pixelated Transitions */
+@keyframes pixelate {
+  0% { filter: blur(0) contrast(100%); }
+  50% { filter: blur(2px) contrast(150%) brightness(1.2); }
+  100% { filter: blur(0) contrast(100%); }
+}
+
+.vhs-transition {
+  animation: pixelate 0.3s ease-out;
+}
+
+/* Glitch Effect for Headers */
+@keyframes glitch {
+  0%, 100% {
+    text-shadow:
+      -2px -2px 0 var(--vhs-black),
+      2px -2px 0 var(--vhs-black),
+      -2px 2px 0 var(--vhs-black),
+      2px 2px 0 var(--vhs-black),
+      0 0 10px var(--vhs-cyan);
+  }
+  20% {
+    text-shadow:
+      -2px -2px 0 var(--vhs-black),
+      2px -2px 0 var(--vhs-black),
+      -2px 2px 0 var(--vhs-black),
+      2px 2px 0 var(--vhs-black),
+      -2px 0 10px var(--vhs-magenta),
+      2px 0 10px var(--vhs-cyan);
+  }
+}
+
+.vhs-glitch {
+  /* No glitch animation for better readability */
+}
+
+/* Notification specific styles */
+.notification-item {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--vhs-cyan);
+  backdrop-filter: blur(2px);
+}
+
+.notification-item:hover {
+  background: rgba(0, 0, 0, 0.8);
+  border-color: var(--vhs-magenta);
+  box-shadow: 0 0 10px var(--vhs-magenta);
+}
+
+/* Replace gradient classes with VHS style */
+.gradient-olympic,
+.gradient-blue-yellow,
+.gradient-green-red,
+.gradient-purple-blue,
 .gradient-green-blue {
-  background: linear-gradient(135deg, #00a651 0%, #0081c8 100%);
+  background: linear-gradient(90deg, var(--vhs-cyan), var(--vhs-magenta));
+  animation: vhs-gradient-shift 3s ease-in-out infinite;
 }
 
-.gradient-subtle {
-  background: linear-gradient(
-    135deg,
-    rgba(0, 129, 200, 0.1) 0%,
-    rgba(252, 177, 49, 0.1) 100%
-  );
+@keyframes vhs-gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 
-.gradient-text {
-  @apply bg-clip-text text-transparent;
-}
+/* Override Tailwind styles for VHS theme */
+.bg-white { background: rgba(0, 0, 0, 0.8) !important; }
+.bg-gray-50 { background: rgba(0, 0, 0, 0.6) !important; }
+.bg-gray-100 { background: rgba(0, 0, 0, 0.7) !important; }
+.text-gray-900 { color: var(--vhs-white) !important; }
+.text-gray-800 { color: var(--vhs-cyan) !important; }
+.text-gray-700 { color: var(--vhs-cyan) !important; }
+.text-gray-600 { color: var(--vhs-white) !important; }
+.text-gray-500 { color: var(--vhs-white) !important; }
+.border-gray-200 { border-color: var(--vhs-cyan) !important; }
+.border-gray-300 { border-color: var(--vhs-cyan) !important; }
 
 /* Animations */
 @keyframes fade-in {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(10px) scale(0.95);
+    filter: blur(5px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
+    filter: blur(0);
   }
 }
 
 .animate-fade-in {
-  animation: fade-in 0.3s ease-out;
+  animation: fade-in 0.5s ease-out;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+/* Static noise animation */
+@keyframes static-noise {
+  0%, 100% { opacity: 0.02; }
+  50% { opacity: 0.05; }
 }
 
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-/* Header shadow extension */
-.header-shadow::after {
-  content: "";
-  position: absolute;
-  top: 100%;
+.static-overlay {
+  position: fixed;
+  top: 0;
   left: 0;
-  right: 0;
-  height: 10px;
-  background: white;
+  width: 100%;
+  height: 100%;
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><filter id="noise"><feTurbulence baseFrequency="0.9" numOctaves="4" /></filter><rect width="200" height="200" filter="url(%23noise)" opacity="0.5"/></svg>');
+  opacity: 0.03;
+  /* Removed animation to prevent flicker */
   pointer-events: none;
+  z-index: 9998;
 }
