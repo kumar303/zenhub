@@ -657,7 +657,7 @@ export function App() {
             <button
               onClick={loadMore}
               disabled={loadingMore}
-              className="gradient-blue-yellow text-white font-medium py-3 px-6 hover:shadow-lg transition-all duration-200 disabled:opacity-50 border-2 border-cyan-500"
+              className="gradient-blue-yellow text-white font-bold py-3 px-6 hover:shadow-lg transition-all duration-200 disabled:opacity-50 border-2 border-cyan-500"
             >
               {loadingMore ? (
                 <span className="flex items-center gap-2">
