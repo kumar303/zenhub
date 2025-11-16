@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/preact";
+import { render, screen, waitFor, fireEvent } from "@testing-library/preact";
 import userEvent from "@testing-library/user-event";
 import { App } from "./App";
 import type {
@@ -979,6 +979,157 @@ describe("<App>", () => {
       // Should still show notifications after timer refresh
       expect(screen.queryByText("Timer test PR")).toBeDefined();
     });
+  });
+
+  it("should render PRs without direct or team review requests as Other Notifications", async () => {
+    setupMockApi({
+      notifications: [
+        {
+          id: "notif-pr-no-review",
+          unread: true,
+          reason: "subscribed", // Not a review request
+          updated_at: "2025-11-14T10:00:00Z",
+          url: "https://api.github.com/notifications/threads/notif-pr-no-review",
+          subscription_url:
+            "https://api.github.com/notifications/threads/notif-pr-no-review/subscription",
+          subject: {
+            title: "Update dependencies",
+            url: "https://api.github.com/repos/test/test-repo/pulls/400",
+            type: "PullRequest",
+          },
+          repository: {
+            id: 123,
+            name: "test-repo",
+            full_name: "test/test-repo",
+            html_url: "https://github.com/test/test-repo",
+            owner: {
+              login: "test",
+              id: 1,
+              avatar_url: "https://avatars.githubusercontent.com/u/1",
+              url: "https://api.github.com/users/test",
+              html_url: "https://github.com/test",
+            },
+          },
+        },
+      ],
+      pullRequests: {
+        "https://api.github.com/repos/test/test-repo/pulls/400": {
+          state: "open",
+          draft: false,
+          requested_reviewers: [], // No direct review requests
+          requested_teams: [], // No team review requests
+        },
+      },
+    });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.queryByText("Refreshing...")).toBeNull();
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("LOADING")).toBeNull();
+    });
+
+    // Should appear in Other Notifications section
+    const otherSection = screen.getByText(/OTHER NOTIFICATIONS/);
+    expect(otherSection).toBeDefined();
+    expect(otherSection.textContent).toContain("[1]");
+
+    // Should NOT appear in Review Requests
+    expect(screen.queryByText(/REVIEW REQUESTS/)).toBeNull();
+
+    // Click to expand Other Notifications
+    const expandButton = otherSection.parentElement?.querySelector("button");
+    expect(expandButton).toBeDefined();
+    if (expandButton) fireEvent.click(expandButton);
+
+    // Verify the PR is shown
+    await waitFor(() => {
+      expect(screen.getByText("Update dependencies")).toBeDefined();
+    });
+  });
+
+  it("should normalize team slugs and show normalized team review requests under correct team section", async () => {
+    setupMockApi({
+      teams: [
+        {
+          id: 444,
+          node_id: "node_444",
+          slug: "checkout-ui-extensions-api-stewardship",
+          name: "Checkout UI Extensions API Stewardship",
+          organization: {
+            login: "shopify",
+            id: 1,
+            avatar_url: "https://avatars.githubusercontent.com/u/1",
+          },
+        },
+      ],
+      notifications: [
+        {
+          id: "notif-team-normalized",
+          unread: true,
+          reason: "review_requested",
+          updated_at: "2025-11-14T10:00:00Z",
+          url: "https://api.github.com/notifications/threads/notif-team-normalized",
+          subscription_url:
+            "https://api.github.com/notifications/threads/notif-team-normalized/subscription",
+          subject: {
+            title: "Add new checkout API",
+            url: "https://api.github.com/repos/test/test-repo/pulls/500",
+            type: "PullRequest",
+          },
+          repository: {
+            id: 123,
+            name: "test-repo",
+            full_name: "test/test-repo",
+            html_url: "https://github.com/test/test-repo",
+            owner: {
+              login: "test",
+              id: 1,
+              avatar_url: "https://avatars.githubusercontent.com/u/1",
+              url: "https://api.github.com/users/test",
+              html_url: "https://github.com/test",
+            },
+          },
+        },
+      ],
+      pullRequests: {
+        "https://api.github.com/repos/test/test-repo/pulls/500": {
+          state: "open",
+          draft: false,
+          requested_reviewers: [],
+          requested_teams: [
+            {
+              // GitHub returns normalized slug with underscores
+              slug: "checkout_ui_extensions_api_stewardship",
+              name: "Checkout UI Extensions API Stewardship",
+            },
+          ],
+        },
+      },
+    });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.queryByText("Refreshing...")).toBeNull();
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("LOADING")).toBeNull();
+    });
+
+    // Should appear under the team section with dashes, not underscores
+    const teamSection = screen.getByText(
+      /CHECKOUT UI EXTENSIONS API STEWARDSHIP/
+    );
+    expect(teamSection).toBeDefined();
+    expect(teamSection.textContent).toContain("[1]");
+
+    // Should NOT appear in Team Review Requests
+    expect(screen.queryByText(/TEAM REVIEW REQUESTS/)).toBeNull();
   });
 
   it("should send web notifications only for newly received notifications after refresh", async () => {
