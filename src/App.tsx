@@ -298,10 +298,98 @@ export function App() {
           <div className="container mx-auto px-4 max-w-6xl">
             <div className="flex items-center justify-between">
               <h1
-                className={`font-bold vhs-text vhs-glitch transition-all duration-300 ${
+                className={`font-bold vhs-text vhs-glitch transition-all duration-300 flex items-center gap-3 ${
                   isScrolled ? "text-2xl" : "text-4xl"
                 }`}
               >
+                {/* Retro TV Icon */}
+                <svg
+                  viewBox="0 0 64 64"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className={`${isScrolled ? "w-8 h-8" : "w-12 h-12"}`}
+                >
+                  {/* TV Body */}
+                  <rect
+                    x="8"
+                    y="20"
+                    width="48"
+                    height="36"
+                    fill="#1a1a1a"
+                    stroke="#00ffff"
+                    strokeWidth="2"
+                  />
+                  {/* TV Screen */}
+                  <rect
+                    x="12"
+                    y="24"
+                    width="40"
+                    height="28"
+                    fill="#0a0a0a"
+                    stroke="#00ffff"
+                    strokeWidth="1"
+                  />
+                  {/* Screen Reflection */}
+                  <path
+                    d="M12 24 L28 40 L20 48 L12 48 Z"
+                    fill="url(#screenGlow)"
+                    opacity="0.3"
+                  />
+                  {/* Antenna Left */}
+                  <line
+                    x1="24"
+                    y1="20"
+                    x2="16"
+                    y2="4"
+                    stroke="#00ffff"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                  <circle cx="16" cy="4" r="2" fill="#ff00ff" />
+                  {/* Antenna Right */}
+                  <line
+                    x1="40"
+                    y1="20"
+                    x2="48"
+                    y2="4"
+                    stroke="#00ffff"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                  <circle cx="48" cy="4" r="2" fill="#ff00ff" />
+                  {/* Control Knobs */}
+                  <circle
+                    cx="46"
+                    cy="30"
+                    r="3"
+                    fill="#1a1a1a"
+                    stroke="#ffff00"
+                    strokeWidth="1"
+                  />
+                  <circle
+                    cx="46"
+                    cy="40"
+                    r="3"
+                    fill="#1a1a1a"
+                    stroke="#ffff00"
+                    strokeWidth="1"
+                  />
+                  {/* TV Legs */}
+                  <rect x="18" y="56" width="4" height="4" fill="#00ffff" />
+                  <rect x="42" y="56" width="4" height="4" fill="#00ffff" />
+                  <defs>
+                    <linearGradient
+                      id="screenGlow"
+                      x1="0%"
+                      y1="0%"
+                      x2="100%"
+                      y2="100%"
+                    >
+                      <stop offset="0%" stopColor="#00ffff" stopOpacity="0.5" />
+                      <stop offset="100%" stopColor="#ff00ff" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+                </svg>
                 ZENHUB
               </h1>
               <div className="flex items-center gap-4">
@@ -343,7 +431,7 @@ export function App() {
                 <div className="relative" ref={menuRef}>
                   <button
                     onClick={() => setShowMenu(!showMenu)}
-                    className={`p-2 hover:bg-gray-100 rounded-lg transition-colors ${
+                    className={`p-2 hover:bg-gray-800 transition-colors ${
                       isScrolled ? "p-1.5" : "p-2"
                     }`}
                     title="More options"
@@ -372,7 +460,7 @@ export function App() {
                           setShowDebugModal(true);
                           setShowMenu(false);
                         }}
-                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700"
+                        className="w-full text-left px-4 py-2 hover:bg-gray-800 hover:text-cyan-500 text-gray-700 transition-colors"
                       >
                         Debug
                       </button>
@@ -393,7 +481,7 @@ export function App() {
                           );
                           location.reload();
                         }}
-                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700 border-t border-gray-200"
+                        className="w-full text-left px-4 py-2 hover:bg-gray-800 hover:text-cyan-500 text-gray-700 border-t border-gray-200 transition-colors"
                       >
                         Clear Cache
                       </button>
@@ -569,7 +657,7 @@ export function App() {
             <button
               onClick={loadMore}
               disabled={loadingMore}
-              className="gradient-blue-yellow text-white font-medium py-3 px-6 rounded-xl hover:shadow-lg transition-all duration-200 disabled:opacity-50"
+              className="gradient-blue-yellow text-white font-medium py-3 px-6 hover:shadow-lg transition-all duration-200 disabled:opacity-50 border-2 border-cyan-500"
             >
               {loadingMore ? (
                 <span className="flex items-center gap-2">

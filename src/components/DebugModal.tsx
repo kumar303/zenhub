@@ -293,13 +293,13 @@ location.reload();
         <div className="p-4 border-t border-gray-200 flex gap-3 justify-end">
           <button
             onClick={handleCopy}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            className="px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 transition-colors border-2 border-cyan-500"
           >
             Copy to Clipboard
           </button>
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+            className="px-4 py-2 bg-gray-900 text-cyan-500 hover:bg-black transition-colors border-2 border-cyan-500"
           >
             Close
           </button>
