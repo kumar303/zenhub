@@ -277,6 +277,32 @@ body::after {
   50% { background-position: 100% 50%; }
 }
 
+/* Visited label styling */
+.vhs-visited-label {
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.9),
+               -1px -1px 2px rgba(0, 0, 0, 0.9),
+               0 0 4px rgba(0, 0, 0, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* Dark text labels (Team Mention, etc) */
+.vhs-label-dark {
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.9),
+               -1px -1px 2px rgba(0, 0, 0, 0.9),
+               0 0 4px rgba(0, 0, 0, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* Permission badges on login */
+.vhs-permission-badge {
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.9),
+               -1px -1px 2px rgba(0, 0, 0, 0.9),
+               0 0 4px rgba(0, 0, 0, 0.9);
+  background: rgba(0, 255, 255, 0.1);
+}
+
 /* Override Tailwind styles for VHS theme */
 .bg-white { background: rgba(0, 0, 0, 0.8) !important; }
 .bg-gray-50 { background: rgba(0, 0, 0, 0.6) !important; }

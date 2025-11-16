@@ -70,12 +70,12 @@ export function NotificationGroup({
               </span>
             )}
             {group.hasTeamMention && (
-              <span className="px-2 py-1 text-xs font-medium rounded-lg bg-gray-300 text-gray-700">
+              <span className="px-2 py-1 text-xs font-bold rounded-lg bg-gray-300 text-gray-700 vhs-label-dark">
                 TEAM MENTION
               </span>
             )}
             {isClicked && (
-              <span className="px-2 py-1 text-xs font-medium rounded-lg bg-gray-200 text-gray-600">
+              <span className="px-2 py-1 text-xs font-bold rounded-lg bg-gray-200 text-gray-600 vhs-visited-label">
                 VISITED
               </span>
             )}

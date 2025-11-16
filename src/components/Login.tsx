@@ -48,13 +48,13 @@ export function Login({ onLogin }: LoginProps) {
             REQUIRED PERMISSIONS:
           </p>
           <div className="flex justify-center gap-2">
-            <span className="px-2 py-1 border border-cyan-500 font-mono text-xs">
+            <span className="px-2 py-1 border border-cyan-500 font-mono text-xs vhs-permission-badge">
               NOTIFICATIONS
             </span>
-            <span className="px-2 py-1 border border-cyan-500 font-mono text-xs">
+            <span className="px-2 py-1 border border-cyan-500 font-mono text-xs vhs-permission-badge">
               REPO
             </span>
-            <span className="px-2 py-1 border border-cyan-500 font-mono text-xs">
+            <span className="px-2 py-1 border border-cyan-500 font-mono text-xs vhs-permission-badge">
               READ:ORG
             </span>
           </div>
