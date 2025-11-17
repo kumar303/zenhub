@@ -836,7 +836,7 @@ export function useNotifications(token: string | null) {
   const refreshAllPages = useCallback(async () => {
     if (!api || currentPage === 0) return;
 
-    // Don't show loading spinner for refresh
+    setLoading(true);
     setError(null);
 
     // Store current notification IDs to identify new ones
@@ -932,7 +932,9 @@ export function useNotifications(token: string | null) {
       // Keep only the last 1000 IDs to prevent unbounded growth
       const recentIds = allSeenIds.slice(-1000);
       sessionStorage.setItem(previouslyNotifiedKey, JSON.stringify(recentIds));
+      setLoading(false);
     } catch (err: any) {
+      setLoading(false);
       if (err.message === "UNAUTHORIZED") {
         setError("Authentication expired. Please login again.");
         setTimeout(() => {
