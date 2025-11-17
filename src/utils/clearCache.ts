@@ -1,3 +1,8 @@
+/**
+ * IMPORTANT: Follow all guidelines in AGENTS.md before making changes.
+ * Run tests, typecheck, and deploy after every change.
+ */
+
 // Utility to clear specific cache entries for debugging
 import { CACHE_KEYS } from "../config/cacheKeys";
 

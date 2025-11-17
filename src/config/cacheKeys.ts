@@ -1,3 +1,8 @@
+/**
+ * IMPORTANT: Follow all guidelines in AGENTS.md before making changes.
+ * Run tests, typecheck, and deploy after every change.
+ */
+
 // Central location for all cache keys to ensure consistency
 export const CACHE_KEYS = {
   // Team cache for storing team review request information

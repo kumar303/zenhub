@@ -1,3 +1,8 @@
+/**
+ * IMPORTANT: Follow all guidelines in AGENTS.md before making changes.
+ * Run tests, typecheck, and deploy after every change.
+ */
+
 // GitHub OAuth configuration
 // Note: For production, you'd need to register an OAuth app and use a backend server
 // For now, we'll use Personal Access Tokens

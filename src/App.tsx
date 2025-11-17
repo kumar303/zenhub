@@ -1,3 +1,8 @@
+/**
+ * IMPORTANT: Follow all guidelines in AGENTS.md before making changes.
+ * Run tests, typecheck, and deploy after every change.
+ */
+
 import { useState, useEffect, useRef } from "preact/hooks";
 import { Login } from "./components/Login";
 import { NotificationGroup } from "./components/NotificationGroup";

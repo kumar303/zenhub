@@ -1,3 +1,8 @@
+/**
+ * IMPORTANT: Follow all guidelines in AGENTS.md before making changes.
+ * Run tests, typecheck, and deploy after every change.
+ */
+
 // Generic cache utility for localStorage with expiration
 export class Cache<T> {
   private storageKey: string;

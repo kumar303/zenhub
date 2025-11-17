@@ -1,3 +1,8 @@
+/**
+ * IMPORTANT: Follow all guidelines in AGENTS.md before making changes.
+ * Run tests, typecheck, and deploy after every change.
+ */
+
 // Cache for user's GitHub teams to avoid repeated API calls
 import type { GitHubTeam } from "../types";
 import { Cache } from "./cache";

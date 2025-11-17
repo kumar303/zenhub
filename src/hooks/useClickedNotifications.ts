@@ -1,3 +1,8 @@
+/**
+ * IMPORTANT: Follow all guidelines in AGENTS.md before making changes.
+ * Run tests, typecheck, and deploy after every change.
+ */
+
 import { useState, useCallback } from "preact/hooks";
 
 const CLICKED_KEY = "clicked_notifications";

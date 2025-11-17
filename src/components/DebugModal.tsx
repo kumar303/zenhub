@@ -1,3 +1,8 @@
+/**
+ * IMPORTANT: Follow all guidelines in AGENTS.md before making changes.
+ * Run tests, typecheck, and deploy after every change.
+ */
+
 import { useState, useEffect } from "preact/hooks";
 import type { NotificationGroup, GitHubTeam } from "../types";
 import { CACHE_KEYS } from "../config/cacheKeys";

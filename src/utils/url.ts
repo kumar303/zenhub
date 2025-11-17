@@ -1,3 +1,8 @@
+/**
+ * IMPORTANT: Follow all guidelines in AGENTS.md before making changes.
+ * Run tests, typecheck, and deploy after every change.
+ */
+
 import type { GitHubSubject } from "../types";
 
 export function getSubjectUrl(subject: GitHubSubject): string {

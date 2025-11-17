@@ -1,3 +1,8 @@
+/**
+ * IMPORTANT: Follow all guidelines in AGENTS.md before making changes.
+ * Run tests, typecheck, and deploy after every change.
+ */
+
 // Cache for issue/PR states to avoid repeated API calls
 const STATE_CACHE_KEY = "github_state_cache";
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes for fresh state

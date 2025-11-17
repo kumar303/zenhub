@@ -1,3 +1,8 @@
+/**
+ * IMPORTANT: Follow all guidelines in AGENTS.md before making changes.
+ * Run tests, typecheck, and deploy after every change.
+ */
+
 // Cache for team review requests and mentions to avoid repeated API calls
 import { ItemCache } from "./cache";
 import { CACHE_KEYS, CACHE_DURATIONS } from "../config/cacheKeys";
