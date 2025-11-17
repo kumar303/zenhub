@@ -1538,4 +1538,103 @@ describe("<App>", () => {
       expect(screen.queryByText(/No notifications!/i)).not.toBeNull();
     });
   });
+
+  it("should display the reason as a fallback label when no specific label applies", async () => {
+    const commentNotification: GitHubNotification = {
+      id: "notif-comment",
+      unread: true,
+      reason: "comment",
+      updated_at: "2025-11-17T10:30:00Z",
+      last_read_at: undefined,
+      subject: {
+        title: "Discussion about implementation",
+        url: "https://api.github.com/repos/test/test-repo/issues/200",
+        type: "Issue",
+        latest_comment_url: undefined,
+      },
+      repository: mockRepository,
+      url: "https://api.github.com/notifications/notif-comment",
+      subscription_url:
+        "https://api.github.com/notifications/threads/notif-comment",
+    };
+
+    setupMockApi({
+      notifications: [commentNotification],
+      pullRequests: {
+        "/issues/200": {
+          state: "open",
+        },
+      },
+    });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.queryByText("LOADING")).toBeNull();
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("Refreshing...")).toBeNull();
+    });
+
+    const otherSection = screen.getByText(/OTHER NOTIFICATIONS/);
+    await userEvent.setup().click(otherSection);
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText("Discussion about implementation")
+      ).not.toBeNull();
+    });
+
+    expect(screen.queryByText("COMMENT")).not.toBeNull();
+  });
+
+  it("should display YOUR PR label instead of falling back to the reason", async () => {
+    const ownIssueNotification: GitHubNotification = {
+      id: "notif-own-issue",
+      unread: true,
+      reason: "author",
+      updated_at: "2025-11-17T11:00:00Z",
+      last_read_at: undefined,
+      subject: {
+        title: "My issue",
+        url: "https://api.github.com/repos/test/test-repo/issues/800",
+        type: "Issue",
+        latest_comment_url: undefined,
+      },
+      repository: mockRepository,
+      url: "https://api.github.com/notifications/notif-own-issue",
+      subscription_url:
+        "https://api.github.com/notifications/threads/notif-own-issue",
+    };
+
+    setupMockApi({
+      notifications: [ownIssueNotification],
+      pullRequests: {
+        "/issues/800": {
+          state: "open",
+        },
+      },
+    });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.queryByText("LOADING")).toBeNull();
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("Refreshing...")).toBeNull();
+    });
+
+    const yourActivitySection = screen.getByText(/YOUR ACTIVITY/);
+    await userEvent.setup().click(yourActivitySection);
+
+    await waitFor(() => {
+      expect(screen.queryByText("My issue")).not.toBeNull();
+    });
+
+    expect(screen.queryByText("YOUR ISSUE")).not.toBeNull();
+    expect(screen.queryByText("AUTHOR")).toBeNull();
+  });
 });

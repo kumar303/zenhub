@@ -4,6 +4,7 @@
  */
 
 import { useState } from "preact/hooks";
+import type { JSX } from "preact";
 import type { NotificationGroup as NotificationGroupType } from "../types";
 import { formatDateTime } from "../utils/date";
 import { getSubjectUrl } from "../utils/url";
@@ -33,6 +34,58 @@ function formatReason(reason: string): string {
   return reasonMap[reason] || reason.replace(/_/g, " ");
 }
 
+function getNotificationLabel(
+  group: NotificationGroupType
+): JSX.Element | null {
+  if (group.isOwnContent) {
+    return (
+      <span className="px-2 py-1 text-xs font-bold rounded-lg gradient-purple-blue text-white">
+        YOUR{" "}
+        {group.subject.type === "PullRequest"
+          ? "PR"
+          : group.subject.type.toUpperCase()}
+      </span>
+    );
+  }
+
+  if (group.hasReviewRequest) {
+    return (
+      <span className="px-2 py-1 text-xs font-bold rounded-lg gradient-green-red text-white">
+        REVIEW REQUEST
+      </span>
+    );
+  }
+
+  if (group.hasMention && !group.hasTeamMention) {
+    return (
+      <span
+        className="px-2 py-1 text-xs font-bold rounded-lg gradient-blue-yellow text-white"
+        title="You were mentioned in this thread (may not be the latest comment)"
+      >
+        MENTIONED
+      </span>
+    );
+  }
+
+  if (group.hasTeamMention) {
+    return (
+      <span className="px-2 py-1 text-xs font-bold rounded-lg bg-gray-300 text-gray-700 vhs-label-dark">
+        TEAM MENTION
+      </span>
+    );
+  }
+
+  if (group.notifications[0]) {
+    return (
+      <span className="px-2 py-1 text-xs font-bold rounded-lg bg-gray-400 text-white vhs-label-dark">
+        {group.notifications[0].reason.replace(/_/g, " ").toUpperCase()}
+      </span>
+    );
+  }
+
+  return null;
+}
+
 export function NotificationGroup({
   group,
   onDismiss,
@@ -53,32 +106,7 @@ export function NotificationGroup({
             <span className="text-sm font-medium text-gray-600">
               {group.repository.full_name}
             </span>
-            {group.isOwnContent && (
-              <span className="px-2 py-1 text-xs font-bold rounded-lg gradient-purple-blue text-white">
-                YOUR{" "}
-                {group.subject.type === "PullRequest"
-                  ? "PR"
-                  : group.subject.type.toUpperCase()}
-              </span>
-            )}
-            {group.hasReviewRequest && (
-              <span className="px-2 py-1 text-xs font-bold rounded-lg gradient-green-red text-white">
-                REVIEW REQUEST
-              </span>
-            )}
-            {group.hasMention && !group.hasTeamMention && (
-              <span
-                className="px-2 py-1 text-xs font-bold rounded-lg gradient-blue-yellow text-white"
-                title="You were mentioned in this thread (may not be the latest comment)"
-              >
-                MENTIONED
-              </span>
-            )}
-            {group.hasTeamMention && (
-              <span className="px-2 py-1 text-xs font-bold rounded-lg bg-gray-300 text-gray-700 vhs-label-dark">
-                TEAM MENTION
-              </span>
-            )}
+            {getNotificationLabel(group)}
             {isClicked && (
               <span className="px-2 py-1 text-xs font-bold rounded-lg bg-gray-200 text-gray-600 vhs-visited-label">
                 VISITED

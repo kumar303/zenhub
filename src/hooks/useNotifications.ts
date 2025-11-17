@@ -482,6 +482,7 @@ export function useNotifications(token: string | null) {
           "subscribed", // Subscribed
           "assign", // Assignments
           "team_mention", // Team mentions
+          "author", // Your own content
         ]);
 
         // Filter notifications: only allowed reasons
