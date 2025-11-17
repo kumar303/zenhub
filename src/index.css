@@ -28,7 +28,7 @@ body {
   position: relative;
 }
 
-/* Animated gradient background */
+/* Animated gradient background - subtle ambient color shift */
 body::before {
   content: "";
   position: fixed;
@@ -36,25 +36,31 @@ body::before {
   left: -50%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(
-    ellipse at center,
-    var(--vhs-dark-blue) 0%,
-    var(--vhs-dark-purple) 50%,
-    var(--vhs-dark-blue) 100%
+  background: linear-gradient(
+    180deg,
+    #001133 0%,
+    /* Midnight blue */ #001a4d 15%,
+    /* Dark blue (current color) */ #0d1a3d 30%,
+    /* Blue with hint of purple */ #1a0a2e 45%,
+    /* Dark purple-blue */ #0f0f2e 60%,
+    /* Purple-tinted midnight */ #0a0a2a 75%,
+    /* Deep blue-purple */ #001133 100% /* Back to midnight blue */
   );
-  animation: vhs-glow 8s ease-in-out infinite;
+  background-size: 100% 400%;
+  animation: ambientColorShift 60s ease-in-out infinite;
   z-index: -1;
 }
 
-@keyframes vhs-glow {
+@keyframes ambientColorShift {
   0%,
   100% {
-    transform: translate(0, 0) scale(1);
-    opacity: 1;
+    background-position: 50% 0%;
   }
-  50% {
-    transform: translate(10px, -10px) scale(1.05);
-    opacity: 0.9;
+  33% {
+    background-position: 50% -100%;
+  }
+  66% {
+    background-position: 50% -200%;
   }
 }
 
