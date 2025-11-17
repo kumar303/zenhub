@@ -14,6 +14,7 @@ export function Login({ onLogin }: LoginProps) {
   const [token, setToken] = useState("");
   const [error, setError] = useState("");
   const [isValidating, setIsValidating] = useState(false);
+  const [showFeatures, setShowFeatures] = useState(false);
 
   const handleCreateToken = () => {
     // Open GitHub token creation page with correct scopes
@@ -129,6 +130,41 @@ export function Login({ onLogin }: LoginProps) {
         )}
 
         <div className="mt-6 text-sm text-center space-y-3 vhs-text">
+          {/* Why Zenhub Section */}
+          <div className="mb-4">
+            <button
+              onClick={() => setShowFeatures(!showFeatures)}
+              className="w-full flex items-center justify-between p-3 border-2 border-cyan-500 hover:border-magenta-500 transition-colors cursor-pointer"
+            >
+              <span className="font-semibold text-cyan-500">WHY ZENHUB?</span>
+              <span className="text-cyan-500 text-xl font-bold">
+                {showFeatures ? "[-]" : "[+]"}
+              </span>
+            </button>
+            {showFeatures && (
+              <div className="mt-2 p-3 border-2 border-cyan-500 text-left space-y-2">
+                <div className="flex items-start gap-2">
+                  <span className="text-cyan-500 text-sm">▸</span>
+                  <p className="text-cyan-400 text-sm">
+                    GET BROWSER NOTIFICATIONS BUT ONLY FOR CRUCIAL UPDATES
+                  </p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-cyan-500 text-sm">▸</span>
+                  <p className="text-cyan-400 text-sm">
+                    ORGANIZE NOTIFICATIONS BY MENTIONS, TEAM REQUESTS, ETC
+                  </p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-cyan-500 text-sm">▸</span>
+                  <p className="text-cyan-400 text-sm">
+                    DON'T GET NOTIFIED ABOUT CLOSED PRS / ISSUES
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
           <p className="font-semibold text-cyan-500">
             REQUIRED PERMISSIONS:
           </p>
