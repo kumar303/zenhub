@@ -983,6 +983,26 @@ describe("<App>", () => {
 
   it("should render PRs without direct or team review requests as Other Notifications", async () => {
     setupMockApi({
+      user: {
+        login: "kumar303",
+        id: 12345,
+        avatar_url: "https://avatars.githubusercontent.com/u/12345",
+        url: "https://api.github.com/users/kumar303",
+        html_url: "https://github.com/kumar303",
+      },
+      teams: [
+        {
+          id: 111,
+          node_id: "node_111",
+          slug: "crafters",
+          name: "Crafters",
+          organization: {
+            login: "shopify",
+            id: 1,
+            avatar_url: "https://avatars.githubusercontent.com/u/1",
+          },
+        },
+      ],
       notifications: [
         {
           id: "notif-pr-no-review",
@@ -1016,8 +1036,16 @@ describe("<App>", () => {
         "https://api.github.com/repos/test/test-repo/pulls/400": {
           state: "open",
           draft: false,
-          requested_reviewers: [], // No direct review requests
-          requested_teams: [], // No team review requests
+          requested_reviewers: [
+            // Other users requested, not kumar303
+            { login: "alice", id: 111 },
+            { login: "bob", id: 222 },
+          ],
+          requested_teams: [
+            // Teams that kumar303 is NOT a part of
+            { slug: "platform", name: "Platform Team" },
+            { slug: "security", name: "Security Team" },
+          ],
         },
       },
     });
