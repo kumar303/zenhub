@@ -312,7 +312,14 @@ export function App() {
                   viewBox="0 0 64 64"
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
-                  className={`${isScrolled ? "w-8 h-8" : "w-12 h-12"}`}
+                  className={`self-center ${
+                    isScrolled ? "w-8 h-8" : "w-12 h-12"
+                  }`}
+                  style={{
+                    transform: isScrolled
+                      ? "translateY(var(--tv-icon-offset-y-scrolled))"
+                      : "translateY(var(--tv-icon-offset-y))",
+                  }}
                 >
                   {/* TV Body */}
                   <rect

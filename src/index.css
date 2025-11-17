@@ -17,6 +17,10 @@
   --vhs-black: #000000;
   --vhs-dark-blue: #001a4d;
   --vhs-dark-purple: #330066;
+
+  /* TV Icon alignment - adjust these to vertically center the TV box with text */
+  --tv-icon-offset-y: -5px; /* Vertical offset: positive moves down, negative moves up */
+  --tv-icon-offset-y-scrolled: -3px; /* Offset when scrolled (smaller header) */
 }
 
 /* Base VHS Styling */
