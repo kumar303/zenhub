@@ -475,15 +475,13 @@ export function App() {
                             STORAGE_KEYS.TOKEN
                           );
                           localStorage.clear();
+                          sessionStorage.clear();
                           if (currentToken) {
                             localStorage.setItem(
                               STORAGE_KEYS.TOKEN,
                               currentToken
                             );
                           }
-                          alert(
-                            "All caches cleared (login preserved). Page will reload."
-                          );
                           location.reload();
                         }}
                         className="w-full text-left px-4 py-2 hover:bg-gray-800 hover:text-cyan-500 text-gray-700 border-t border-gray-200 transition-colors"
