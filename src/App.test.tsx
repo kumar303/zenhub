@@ -1637,4 +1637,110 @@ describe("<App>", () => {
     expect(screen.queryByText("YOUR ISSUE")).not.toBeNull();
     expect(screen.queryByText("AUTHOR")).toBeNull();
   });
+
+  it("should send web notifications for newly received author notifications after refresh", async () => {
+    vi.clearAllMocks();
+
+    delete (global as any).Notification;
+
+    const mockNotification = vi.fn();
+    global.Notification = mockNotification as any;
+    (global.Notification as any).permission = "granted";
+    (global.Notification as any).requestPermission = vi
+      .fn()
+      .mockResolvedValue("granted");
+
+    const existingNotification: GitHubNotification = {
+      id: "notif-existing",
+      unread: true,
+      reason: "subscribed",
+      updated_at: "2025-11-14T09:00:00Z",
+      last_read_at: undefined,
+      subject: {
+        title: "Existing PR",
+        url: "https://api.github.com/repos/test/test-repo/pulls/100",
+        type: "PullRequest",
+        latest_comment_url: undefined,
+      },
+      repository: mockRepository,
+      url: "https://api.github.com/notifications/notif-existing",
+      subscription_url:
+        "https://api.github.com/notifications/threads/notif-existing",
+    };
+
+    const newAuthorNotification: GitHubNotification = {
+      id: "notif-author",
+      unread: true,
+      reason: "author",
+      updated_at: "2025-11-14T11:00:00Z",
+      last_read_at: undefined,
+      subject: {
+        title: "I created this PR",
+        url: "https://api.github.com/repos/test/test-repo/pulls/101",
+        type: "PullRequest",
+        latest_comment_url: undefined,
+      },
+      repository: mockRepository,
+      url: "https://api.github.com/notifications/notif-author",
+      subscription_url:
+        "https://api.github.com/notifications/threads/notif-author",
+    };
+
+    setupMockApi({
+      notifications: [existingNotification],
+      pullRequests: {
+        "/pulls/100": {
+          state: "open",
+        },
+      },
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.queryByText("LOADING")).toBeNull();
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("Refreshing...")).toBeNull();
+    });
+
+    setupMockApi({
+      notifications: [newAuthorNotification, existingNotification],
+      pullRequests: {
+        "/pulls/100": {
+          state: "open",
+        },
+        "/pulls/101": {
+          state: "open",
+        },
+      },
+    });
+
+    expect(mockNotification).not.toHaveBeenCalled();
+
+    const refreshButton = screen.getByText("REFRESH");
+    await user.click(refreshButton);
+
+    await waitFor(() => {
+      expect(screen.queryByText("LOADING")).toBeNull();
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("Refreshing...")).toBeNull();
+    });
+
+    expect(mockNotification).toHaveBeenCalledWith(
+      "[Your PullRequest] I created this PR",
+      expect.objectContaining({
+        body: "test/test-repo",
+        icon: "https://github.githubassets.com/favicons/favicon.png",
+        tag: expect.stringContaining(
+          "test/test-repo#https://api.github.com/repos/test/test-repo/pulls/101"
+        ),
+        requireInteraction: true,
+      })
+    );
+  });
 });

@@ -230,8 +230,7 @@ export function useNotifications(token: string | null) {
           // Check if user is the author
           if (notification.reason === "author") {
             groups[key].isOwnContent = true;
-            // Don't mark as prominent if it's just because we authored it
-            // This helps filter out our own activity
+            groups[key].isProminentForMe = true;
           }
         }
       }
