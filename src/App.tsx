@@ -275,7 +275,7 @@ export function App() {
       <div className="static-overlay" />
 
       {/* VHS Loading Screen */}
-      {(initialLoad || loading) && (
+      {initialLoad && (
         <div className="vhs-loading">
           <div className="vhs-test-pattern">
             <div className="vhs-test-bar" />
