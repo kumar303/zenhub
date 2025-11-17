@@ -115,6 +115,7 @@ interface MockApiOptions {
     }
   >;
   notFoundUrls?: string[];
+  errorUrls?: string[];
 }
 
 function setupMockApi(options: MockApiOptions = {}) {
@@ -124,6 +125,7 @@ function setupMockApi(options: MockApiOptions = {}) {
     notifications = [],
     pullRequests = {},
     notFoundUrls = [],
+    errorUrls = [],
   } = options;
 
   const mockFetch = vi.mocked(global.fetch);
@@ -131,7 +133,16 @@ function setupMockApi(options: MockApiOptions = {}) {
   mockFetch.mockImplementation((url) => {
     const urlString = url.toString();
 
-    // Check for 404 URLs first
+    // Check for error URLs (500 errors) first
+    for (const errorUrl of errorUrls) {
+      if (urlString.includes(errorUrl)) {
+        return Promise.resolve(
+          createMockResponse({ message: "Internal Server Error" }, 500)
+        );
+      }
+    }
+
+    // Check for 404 URLs
     for (const notFoundUrl of notFoundUrls) {
       if (urlString.includes(notFoundUrl)) {
         return Promise.resolve(
@@ -445,6 +456,11 @@ describe("<App>", () => {
 
     setupMockApi({
       notifications: [mentionNotification],
+      pullRequests: {
+        "/issues/94": {
+          state: "open",
+        },
+      },
     });
 
     const { unmount } = render(<App />);
@@ -1439,5 +1455,87 @@ describe("<App>", () => {
     });
 
     expect(mockNotification).not.toHaveBeenCalled();
+  });
+
+  it("should hide notifications when fetching PR state results in an error", async () => {
+    const mergedPR: GitHubNotification = {
+      id: "notif-merged",
+      unread: true,
+      reason: "team_mention",
+      updated_at: "2025-08-21T16:55:33Z",
+      last_read_at: undefined,
+      subject: {
+        title: "remove mobile beta flag",
+        url: "https://api.github.com/repos/shop/world/pulls/149303",
+        type: "PullRequest",
+        latest_comment_url: undefined,
+      },
+      repository: mockRepository,
+      url: "https://api.github.com/notifications/notif-merged",
+      subscription_url:
+        "https://api.github.com/notifications/threads/notif-merged",
+    };
+
+    setupMockApi({
+      notifications: [mergedPR],
+      errorUrls: ["/pulls/149303"],
+    });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.queryByText("LOADING")).toBeNull();
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("Refreshing...")).toBeNull();
+    });
+
+    // The notification should NOT be visible since we couldn't fetch its state
+    // Instead, we should see "No notifications!"
+    await waitFor(() => {
+      expect(screen.queryByText(/No notifications!/i)).not.toBeNull();
+    });
+  });
+
+  it("should hide notifications when fetching PR state is still pending", async () => {
+    const pendingPR: GitHubNotification = {
+      id: "notif-pending",
+      unread: true,
+      reason: "review_requested",
+      updated_at: "2025-11-17T10:00:00Z",
+      last_read_at: undefined,
+      subject: {
+        title: "New feature implementation",
+        url: "https://api.github.com/repos/shop/world/pulls/150000",
+        type: "PullRequest",
+        latest_comment_url: undefined,
+      },
+      repository: mockRepository,
+      url: "https://api.github.com/notifications/notif-pending",
+      subscription_url:
+        "https://api.github.com/notifications/threads/notif-pending",
+    };
+
+    // Don't mock the PR details - this simulates the state not being fetched yet
+    setupMockApi({
+      notifications: [pendingPR],
+      pullRequests: {}, // Explicitly no PR state provided
+    });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.queryByText("LOADING")).toBeNull();
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("Refreshing...")).toBeNull();
+    });
+
+    // The notification should NOT be visible since state hasn't been fetched yet
+    await waitFor(() => {
+      expect(screen.queryByText(/No notifications!/i)).not.toBeNull();
+    });
   });
 });

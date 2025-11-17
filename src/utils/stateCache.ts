@@ -70,8 +70,8 @@ export class StateCache {
 
   isClosedOrMerged(url: string): boolean {
     const state = this.get(url);
-    // Don't filter out unknown states - better to show them than hide them
-    if (state === "unknown") return false;
+    // Hide notifications until state is known to prevent showing closed/merged PRs
+    if (state === "unknown" || state === null) return true;
     return state === "closed" || state === "merged" || state === "deleted";
   }
 
