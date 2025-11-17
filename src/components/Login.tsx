@@ -3,21 +3,55 @@
  * Run tests, typecheck, and deploy after every change.
  */
 
+import { useState } from "preact/hooks";
+
 interface LoginProps {
   onLogin: (token: string) => void;
 }
 
 export function Login({ onLogin }: LoginProps) {
-  const handleLogin = () => {
-    // For now, using Personal Access Token method
-    // In production, you'd implement proper OAuth flow with a backend
-    const token = prompt(
-      'Enter your GitHub Personal Access Token with "notifications", "repo", and "read:org" scopes:\n\n' +
-        "You can create one at: https://github.com/settings/tokens/new"
-    );
+  const [showTokenInput, setShowTokenInput] = useState(false);
+  const [token, setToken] = useState("");
+  const [error, setError] = useState("");
+  const [isValidating, setIsValidating] = useState(false);
 
-    if (token) {
-      onLogin(token.trim());
+  const handleCreateToken = () => {
+    // Open GitHub token creation page with correct scopes
+    window.open(
+      "https://github.com/settings/tokens/new?description=Zenhub%20Notifications&scopes=notifications,repo,read:org",
+      "_blank"
+    );
+    setShowTokenInput(true);
+  };
+
+  const handleSubmit = async (e: Event) => {
+    e.preventDefault();
+    const trimmedToken = token.trim();
+    if (!trimmedToken) {
+      setError("Please enter a valid GitHub token");
+      return;
+    }
+
+    setIsValidating(true);
+    setError("");
+
+    try {
+      // Validate token by making a test API call
+      const response = await fetch("https://api.github.com/user", {
+        headers: {
+          Authorization: `Bearer ${trimmedToken}`,
+        },
+      });
+
+      if (response.ok) {
+        onLogin(trimmedToken);
+      } else {
+        setError("Invalid token. Please check your token and try again.");
+      }
+    } catch (err) {
+      setError("Failed to validate token. Please try again.");
+    } finally {
+      setIsValidating(false);
     }
   };
 
@@ -41,12 +75,58 @@ export function Login({ onLogin }: LoginProps) {
           <p className="vhs-text text-xl">GITHUB NOTIFICATIONS</p>
         </div>
 
-        <button
-          onClick={handleLogin}
-          className="w-full vhs-button py-4 px-6 font-bold vhs-transition"
-        >
-          [LOGIN WITH GITHUB]
-        </button>
+        {!showTokenInput ? (
+          <button
+            onClick={handleCreateToken}
+            className="w-full vhs-button py-4 px-6 font-bold vhs-transition"
+          >
+            [CREATE GITHUB TOKEN]
+          </button>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="token" className="block text-sm font-medium text-cyan-500 mb-2">
+                PASTE YOUR GITHUB TOKEN:
+              </label>
+              <input
+                id="token"
+                type="password"
+                value={token}
+                onInput={(e) => setToken((e.target as HTMLInputElement).value)}
+                className="w-full px-4 py-3 bg-black border-2 border-cyan-500 text-cyan-500 font-mono focus:border-magenta-500 focus:outline-none"
+                placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                disabled={isValidating}
+                autoFocus
+              />
+            </div>
+
+            {error && (
+              <div className="text-red-500 text-sm border border-red-500 p-2">
+                [ERROR] {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isValidating}
+              className="w-full vhs-button py-3 px-6 font-bold vhs-transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isValidating ? "[VALIDATING...]" : "[AUTHENTICATE]"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowTokenInput(false);
+                setToken("");
+                setError("");
+              }}
+              className="w-full text-cyan-500 hover:text-magenta-500 text-sm underline"
+            >
+              ← BACK
+            </button>
+          </form>
+        )}
 
         <div className="mt-6 text-sm text-center space-y-3 vhs-text">
           <p className="font-semibold text-cyan-500">
@@ -64,27 +144,34 @@ export function Login({ onLogin }: LoginProps) {
             </span>
           </div>
 
-          <div className="mt-4 p-3 border-2 border-yellow-500 text-left">
-            <p className="text-yellow-500 font-medium mb-1">
-              [!] SSO CONFIGURATION REQUIRED
-            </p>
-            <ol className="text-yellow-400 text-xs mt-1 ml-4 list-decimal space-y-1">
-              <li>CREATE TOKEN WITH REQUIRED SCOPES</li>
-              <li>CLICK "CONFIGURE SSO" NEXT TO TOKEN</li>
-              <li>AUTHORIZE TOKEN FOR YOUR ORGANIZATION</li>
-            </ol>
-          </div>
-
-          <p className="text-xs pt-2">
-            <a
-              href="https://github.com/settings/tokens/new?scopes=notifications,repo,read:org"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-cyan-500 hover:text-magenta-500 underline font-medium"
-            >
-              CREATE NEW TOKEN →
-            </a>
-          </p>
+          {showTokenInput ? (
+            <div className="mt-4 p-3 border-2 border-yellow-500 text-left">
+              <p className="text-yellow-500 font-medium mb-1">
+                [!] TOKEN CREATION STEPS
+              </p>
+              <ol className="text-yellow-400 text-xs mt-1 ml-4 list-decimal space-y-1">
+                <li>GITHUB OPENED IN NEW TAB</li>
+                <li>CONFIRM SCOPES ARE SELECTED</li>
+                <li>CLICK "GENERATE TOKEN"</li>
+                <li>COPY THE TOKEN (STARTS WITH ghp_)</li>
+                <li>PASTE IT ABOVE</li>
+              </ol>
+              <p className="text-xs text-cyan-500 mt-2">
+                DON'T FORGET TO CONFIGURE SSO IF REQUIRED!
+              </p>
+            </div>
+          ) : (
+            <div className="mt-4 p-3 border-2 border-yellow-500 text-left">
+              <p className="text-yellow-500 font-medium mb-1">
+                [!] SSO CONFIGURATION REQUIRED
+              </p>
+              <ol className="text-yellow-400 text-xs mt-1 ml-4 list-decimal space-y-1">
+                <li>CREATE TOKEN WITH REQUIRED SCOPES</li>
+                <li>CLICK "CONFIGURE SSO" NEXT TO TOKEN</li>
+                <li>AUTHORIZE TOKEN FOR YOUR ORGANIZATION</li>
+              </ol>
+            </div>
+          )}
         </div>
       </div>
     </div>

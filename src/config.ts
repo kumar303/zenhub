@@ -9,7 +9,7 @@
 export const GITHUB_CONFIG = {
   CLIENT_ID: "Ov23liJFM6vNFpNlKKcP", // Placeholder - requires backend for real OAuth
   REDIRECT_URI: window.location.origin + window.location.pathname,
-  SCOPE: "notifications repo read:user",
+  SCOPE: "notifications repo read:user read:org",
   API_BASE: "https://api.github.com",
 };
 
