@@ -1089,7 +1089,7 @@ describe("<App>", () => {
     expect(screen.queryByText(/TEAM REVIEW REQUESTS/)).toBeNull();
   });
 
-  it("should send web notifications only for newly received notifications after refresh", async () => {
+  it("should send web notifications for newly received review requests after refresh", async () => {
     vi.clearAllMocks();
 
     // Clear any existing Notification mock
@@ -1146,14 +1146,14 @@ describe("<App>", () => {
     // No notifications should be sent on initial load
     expect(mockNotification).not.toHaveBeenCalled();
 
-    // Now add a new notification and refresh
+    // Now add a new notification with direct review request and refresh
     const newNotification: GitHubNotification = {
       id: "notif-new",
       unread: true,
-      reason: "mention",
+      reason: "review_requested",
       updated_at: "2025-11-14T11:00:00Z",
       subject: {
-        title: "New PR with mention",
+        title: "New PR needs review",
         url: "https://api.github.com/repos/test/test-repo/pulls/101",
         type: "PullRequest",
       },
@@ -1173,6 +1173,7 @@ describe("<App>", () => {
         },
         "/pulls/101": {
           state: "open",
+          requested_reviewers: [mockUser],
         },
       },
     });
@@ -1192,7 +1193,7 @@ describe("<App>", () => {
     });
 
     expect(mockNotification).toHaveBeenCalledWith(
-      "[Mention] New PR with mention",
+      "[Review Request] New PR needs review",
       expect.objectContaining({
         body: "test/test-repo",
         icon: "https://github.githubassets.com/favicons/favicon.png",
@@ -1212,6 +1213,231 @@ describe("<App>", () => {
     });
 
     // No new notifications should be sent
+    expect(mockNotification).not.toHaveBeenCalled();
+  });
+
+  it("should send web notifications for newly received mentions after refresh", async () => {
+    vi.clearAllMocks();
+
+    delete (global as any).Notification;
+
+    const mockNotification = vi.fn();
+    global.Notification = mockNotification as any;
+    (global.Notification as any).permission = "granted";
+    (global.Notification as any).requestPermission = vi
+      .fn()
+      .mockResolvedValue("granted");
+
+    const existingNotification: GitHubNotification = {
+      id: "notif-existing",
+      unread: true,
+      reason: "review_requested",
+      updated_at: "2025-11-14T10:00:00Z",
+      subject: {
+        title: "Existing PR",
+        url: "https://api.github.com/repos/test/test-repo/pulls/100",
+        type: "PullRequest",
+      },
+      repository: mockRepository,
+      url: "https://api.github.com/notifications/notif-existing",
+      subscription_url:
+        "https://api.github.com/notifications/threads/notif-existing",
+    };
+
+    setupMockApi({
+      notifications: [existingNotification],
+      pullRequests: {
+        "/pulls/100": {
+          state: "open",
+          requested_reviewers: [mockUser],
+        },
+      },
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.queryByText("LOADING")).toBeNull();
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("Refreshing...")).toBeNull();
+    });
+
+    expect(mockNotification).not.toHaveBeenCalled();
+
+    const newMentionNotification: GitHubNotification = {
+      id: "notif-mention",
+      unread: true,
+      reason: "mention",
+      updated_at: "2025-11-14T11:00:00Z",
+      subject: {
+        title: "PR with new mention",
+        url: "https://api.github.com/repos/test/test-repo/pulls/102",
+        type: "PullRequest",
+      },
+      repository: mockRepository,
+      url: "https://api.github.com/notifications/notif-mention",
+      subscription_url:
+        "https://api.github.com/notifications/threads/notif-mention",
+    };
+
+    setupMockApi({
+      notifications: [existingNotification, newMentionNotification],
+      pullRequests: {
+        "/pulls/100": {
+          state: "open",
+          requested_reviewers: [mockUser],
+        },
+        "/pulls/102": {
+          state: "open",
+        },
+      },
+    });
+
+    const refreshButton = screen.getByText("REFRESH");
+    await user.click(refreshButton);
+
+    await waitFor(() => {
+      expect(screen.queryByText("Refreshing...")).toBeNull();
+    });
+
+    await waitFor(() => {
+      expect(mockNotification).toHaveBeenCalledTimes(1);
+    });
+
+    expect(mockNotification).toHaveBeenCalledWith(
+      "[Mention] PR with new mention",
+      expect.objectContaining({
+        body: "test/test-repo",
+        icon: "https://github.githubassets.com/favicons/favicon.png",
+        tag: expect.stringContaining(
+          "test/test-repo#https://api.github.com/repos/test/test-repo/pulls/102"
+        ),
+        requireInteraction: true,
+      })
+    );
+  });
+
+  it("should not send web notifications for team review requests after refresh", async () => {
+    vi.clearAllMocks();
+
+    delete (global as any).Notification;
+
+    const mockNotification = vi.fn();
+    global.Notification = mockNotification as any;
+    (global.Notification as any).permission = "granted";
+    (global.Notification as any).requestPermission = vi
+      .fn()
+      .mockResolvedValue("granted");
+
+    const existingNotification: GitHubNotification = {
+      id: "notif-existing",
+      unread: true,
+      reason: "review_requested",
+      updated_at: "2025-11-14T10:00:00Z",
+      subject: {
+        title: "Existing PR",
+        url: "https://api.github.com/repos/test/test-repo/pulls/100",
+        type: "PullRequest",
+      },
+      repository: mockRepository,
+      url: "https://api.github.com/notifications/notif-existing",
+      subscription_url:
+        "https://api.github.com/notifications/threads/notif-existing",
+    };
+
+    setupMockApi({
+      teams: [
+        {
+          id: 222,
+          node_id: "node_222",
+          slug: "platform",
+          name: "Platform Team",
+          organization: {
+            login: "shopify",
+            id: 1,
+            avatar_url: "https://avatars.githubusercontent.com/u/1",
+          },
+        },
+      ],
+      notifications: [existingNotification],
+      pullRequests: {
+        "/pulls/100": {
+          state: "open",
+          requested_reviewers: [mockUser],
+        },
+      },
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.queryByText("LOADING")).toBeNull();
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("Refreshing...")).toBeNull();
+    });
+
+    expect(mockNotification).not.toHaveBeenCalled();
+
+    const newTeamReviewNotification: GitHubNotification = {
+      id: "notif-team-review",
+      unread: true,
+      reason: "review_requested",
+      updated_at: "2025-11-14T11:00:00Z",
+      subject: {
+        title: "Team PR needs review",
+        url: "https://api.github.com/repos/test/test-repo/pulls/103",
+        type: "PullRequest",
+      },
+      repository: mockRepository,
+      url: "https://api.github.com/notifications/notif-team-review",
+      subscription_url:
+        "https://api.github.com/notifications/threads/notif-team-review",
+    };
+
+    setupMockApi({
+      teams: [
+        {
+          id: 222,
+          node_id: "node_222",
+          slug: "platform",
+          name: "Platform Team",
+          organization: {
+            login: "shopify",
+            id: 1,
+            avatar_url: "https://avatars.githubusercontent.com/u/1",
+          },
+        },
+      ],
+      notifications: [existingNotification, newTeamReviewNotification],
+      pullRequests: {
+        "/pulls/100": {
+          state: "open",
+          requested_reviewers: [mockUser],
+        },
+        "/pulls/103": {
+          state: "open",
+          requested_teams: [{ slug: "platform", name: "Platform Team" }],
+        },
+      },
+    });
+
+    const refreshButton = screen.getByText("REFRESH");
+    await user.click(refreshButton);
+
+    await waitFor(() => {
+      expect(screen.queryByText("Refreshing...")).toBeNull();
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("Team PR needs review")).toBeDefined();
+    });
+
     expect(mockNotification).not.toHaveBeenCalled();
   });
 });

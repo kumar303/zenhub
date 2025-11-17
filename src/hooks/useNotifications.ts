@@ -601,6 +601,8 @@ export function useNotifications(token: string | null) {
         return;
       }
 
+      // Only send web notifications for mentions and direct review requests
+      // Team reviews are filtered out because they have isProminentForMe = false
       const prominentGroups = groups.filter((g) => g.isProminentForMe);
 
       for (const group of prominentGroups) {
