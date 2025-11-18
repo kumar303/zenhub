@@ -198,7 +198,9 @@ location.reload();
         try {
           const dismissedList = JSON.parse(dismissed);
           const displayedIds = notifications.map((n) => n.id);
-          const shouldBeHidden = displayedIds.filter((id) => dismissedList.includes(id));
+          const shouldBeHidden = displayedIds.filter((id) =>
+            dismissedList.includes(id)
+          );
           return {
             dismissedCount: dismissedList.length,
             displayedCount: notifications.length,
@@ -213,11 +215,15 @@ location.reload();
         if (!stateCache) return "empty";
         try {
           const parsed = JSON.parse(stateCache);
-          const entries = Object.entries(parsed).map(([url, data]: [string, any]) => ({
-            url,
-            state: data.state,
-            age: Math.round((Date.now() - data.timestamp) / 1000 / 60) + " minutes",
-          }));
+          const entries = Object.entries(parsed).map(
+            ([url, data]: [string, any]) => ({
+              url,
+              state: data.state,
+              age:
+                Math.round((Date.now() - data.timestamp) / 1000 / 60) +
+                " minutes",
+            })
+          );
 
           return {
             count: entries.length,
@@ -259,12 +265,10 @@ location.reload();
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(debugData);
-      alert("Debug data copied to clipboard!");
     } catch (err) {
       console.error("Failed to copy:", err);
     }
   };
-
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
