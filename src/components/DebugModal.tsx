@@ -24,6 +24,7 @@ export function DebugModal({
 }: DebugModalProps) {
   const [debugData, setDebugData] = useState("");
   const [capturedLogs, setCapturedLogs] = useState<string[]>([]);
+  const [copied, setCopied] = useState(false);
 
   // Capture console logs when modal is open
   useEffect(() => {
@@ -265,6 +266,8 @@ location.reload();
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(debugData);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error("Failed to copy:", err);
     }
@@ -304,7 +307,7 @@ location.reload();
             onClick={handleCopy}
             className="px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 transition-colors border-2 border-cyan-500"
           >
-            Copy to Clipboard
+            {copied ? "Copied" : "Copy to Clipboard"}
           </button>
           <button
             onClick={onClose}
