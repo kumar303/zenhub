@@ -513,100 +513,101 @@ describe("<App>", () => {
       expect(screen.queryByText(/Mentions/)).toBeNull();
     });
 
-    it("should keep notifications dismissed even when notification ID changes", async () => {
-      // Pre-populate dismissed notifications in localStorage
-      localStorage.setItem(
-        "dismissed_notifications",
-        JSON.stringify([
-          "plasma-network/plasma.to#https://api.github.com/repos/plasma-network/plasma.to/issues/94",
-        ])
-      );
-
-      // First notification with one ID
-      const mentionNotification1: GitHubNotification = {
-        id: "19199998390",
+    it("should only dismiss the specific notification, not future notifications for the same PR", async () => {
+      const firstNotification: GitHubNotification = {
+        id: "notif-comment-1",
         unread: true,
-        reason: "mention",
-        updated_at: "2025-09-25T21:08:47Z",
+        reason: "comment",
+        updated_at: "2025-11-17T10:00:00Z",
         last_read_at: undefined,
         subject: {
-          title:
-            "Plasma Foundation | Over USD 2.4B TVL & 54.02% APY, XPL and Staking Rewards",
-          url: "https://api.github.com/repos/plasma-network/plasma.to/issues/94",
+          title: "Feature request discussion",
+          url: "https://api.github.com/repos/test/test-repo/issues/500",
           type: "Issue",
           latest_comment_url: undefined,
         },
-        repository: {
-          id: 1,
-          name: "plasma.to",
-          full_name: "plasma-network/plasma.to",
-          owner: {
-            login: "plasma-network",
-            id: 1,
-            avatar_url: "https://avatars.githubusercontent.com/u/1",
-            url: "https://api.github.com/users/plasma-network",
-            html_url: "https://github.com/plasma-network",
-          },
-          html_url: "https://github.com/plasma-network/plasma.to",
-          description: "Plasma Network",
-        },
-        url: "https://api.github.com/notifications/19199998390",
+        repository: mockRepository,
+        url: "https://api.github.com/notifications/notif-comment-1",
         subscription_url:
-          "https://api.github.com/notifications/threads/19199998390",
+          "https://api.github.com/notifications/threads/notif-comment-1",
       };
 
       setupMockApi({
-        notifications: [mentionNotification1],
+        notifications: [firstNotification],
+        pullRequests: {
+          "/issues/500": {
+            state: "open",
+          },
+        },
+      });
+
+      const { unmount } = render(<App />);
+
+      await waitFor(() => {
+        expect(screen.queryByText("LOADING")).toBeNull();
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByText("Refreshing...")).toBeNull();
+      });
+
+      const otherSection = screen.getByText(/OTHER NOTIFICATIONS/);
+      const user = userEvent.setup();
+      await user.click(otherSection);
+
+      await waitFor(() => {
+        expect(screen.queryByText("Feature request discussion")).not.toBeNull();
+      });
+
+      const dismissButton = screen.getByLabelText("Dismiss notification");
+      await user.click(dismissButton);
+
+      await waitFor(() => {
+        expect(screen.queryByText("Feature request discussion")).toBeNull();
+      });
+
+      unmount();
+
+      const secondNotification: GitHubNotification = {
+        id: "notif-comment-2",
+        unread: true,
+        reason: "comment",
+        updated_at: "2025-11-17T11:00:00Z",
+        last_read_at: undefined,
+        subject: {
+          title: "Feature request discussion",
+          url: "https://api.github.com/repos/test/test-repo/issues/500",
+          type: "Issue",
+          latest_comment_url: undefined,
+        },
+        repository: mockRepository,
+        url: "https://api.github.com/notifications/notif-comment-2",
+        subscription_url:
+          "https://api.github.com/notifications/threads/notif-comment-2",
+      };
+
+      setupMockApi({
+        notifications: [secondNotification],
+        pullRequests: {
+          "/issues/500": {
+            state: "open",
+          },
+        },
       });
 
       render(<App />);
 
       await waitFor(() => {
-        expect(screen.queryByText("Refreshing...")).toBeNull();
+        expect(screen.queryByText("LOADING")).toBeNull();
       });
-
-      // The notification should not be visible since it's already dismissed
-      expect(
-        screen.queryByText(
-          "Plasma Foundation | Over USD 2.4B TVL & 54.02% APY, XPL and Staking Rewards"
-        )
-      ).toBeNull();
-      expect(screen.queryByText(/Mentions/)).toBeNull();
-
-      // Now simulate a refresh where the notification comes back with a different ID
-      const mentionNotification2: GitHubNotification = {
-        ...mentionNotification1,
-        id: "19200000000", // Different notification ID
-        url: "https://api.github.com/notifications/19200000000",
-        subscription_url:
-          "https://api.github.com/notifications/threads/19200000000",
-      };
-
-      setupMockApi({
-        notifications: [mentionNotification2],
-      });
-
-      // Wait for app to render
-      await waitFor(() => {
-        const refreshBtn = screen.queryByText("REFRESH");
-        expect(refreshBtn).toBeTruthy();
-      });
-
-      const user = userEvent.setup();
-      const refreshButton = screen.getByText("REFRESH");
-      await user.click(refreshButton);
 
       await waitFor(() => {
         expect(screen.queryByText("Refreshing...")).toBeNull();
       });
 
-      // The notification should still not be visible because we group by repo#issue URL
-      expect(
-        screen.queryByText(
-          "Plasma Foundation | Over USD 2.4B TVL & 54.02% APY, XPL and Staking Rewards"
-        )
-      ).toBeNull();
-      expect(screen.queryByText(/Mentions/)).toBeNull();
+      await waitFor(() => {
+        expect(screen.queryByText("Feature request discussion")).not.toBeNull();
+      });
     });
   });
 

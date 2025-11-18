@@ -507,16 +507,18 @@ export function useNotifications(token: string | null) {
           `[FetchNotifications] Processed ${processed.length} groups, dismissed list has ${dismissed.length} items`
         );
 
-        // Filter out dismissed groups AFTER grouping
-        // This ensures groups stay dismissed even if their individual notifications change
+        // Filter out groups where ALL notifications are dismissed
+        // Groups with at least one non-dismissed notification will still appear
         const nonDismissedGroups = processed.filter((group) => {
-          const isDismissed = dismissed.includes(group.id);
-          if (isDismissed) {
+          const allDismissed = group.notifications.every((notif) =>
+            dismissed.includes(notif.id)
+          );
+          if (allDismissed) {
             console.log(
               `Filtering out dismissed notification: ${group.subject.title} (${group.id})`
             );
           }
-          return !isDismissed;
+          return !allDismissed;
         });
 
         console.log(
@@ -682,11 +684,12 @@ export function useNotifications(token: string | null) {
           `[Dismiss] Current dismissed list has ${dismissed.length} items`
         );
 
-        // Store the group ID instead of individual notification IDs
-        // This ensures the group stays dismissed even if individual notifications change
-        // Use a Set to prevent duplicates
+        // Store individual notification IDs, not the group ID
+        // This allows future notifications for the same PR/issue to still appear
         const dismissedSet = new Set(dismissed);
-        dismissedSet.add(groupId);
+        group.notifications.forEach((notif) => {
+          dismissedSet.add(notif.id);
+        });
         const newDismissed = Array.from(dismissedSet);
 
         console.log(
@@ -874,15 +877,17 @@ export function useNotifications(token: string | null) {
         user ?? undefined
       );
 
-      // Filter out dismissed groups
+      // Filter out groups where ALL notifications are dismissed
       const nonDismissedGroups = processed.filter((group) => {
-        const isDismissed = dismissed.includes(group.id);
-        if (isDismissed) {
+        const allDismissed = group.notifications.every((notif) =>
+          dismissed.includes(notif.id)
+        );
+        if (allDismissed) {
           console.log(
             `[Refresh] Filtering out dismissed notification: ${group.subject.title} (${group.id})`
           );
         }
-        return !isDismissed;
+        return !allDismissed;
       });
 
       setNotifications(nonDismissedGroups);
