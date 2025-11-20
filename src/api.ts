@@ -11,6 +11,8 @@ import type {
   GitHubTeam,
 } from "./types";
 
+export const DEFAULT_NOTIFICATIONS_PER_PAGE = 200;
+
 export class GitHubAPI {
   private token: string;
 
@@ -47,11 +49,21 @@ export class GitHubAPI {
 
   async getNotifications(options: {
     page: number;
-    perPage: number;
+    perPage?: number;
     all?: boolean;
     since?: string;
   }): Promise<GitHubNotification[]> {
-    const { page, perPage, all = false, since } = options;
+    const {
+      page,
+      perPage = DEFAULT_NOTIFICATIONS_PER_PAGE,
+      all = false,
+      since,
+    } = options;
+
+    // Default to fetching notifications from the last week
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const defaultSince = oneWeekAgo.toISOString();
 
     // GitHub API supports pagination with per_page and page parameters
     // By default, only fetch unread notifications to reduce load
@@ -67,9 +79,8 @@ export class GitHubAPI {
     }
 
     // Add since parameter to filter by date (ISO 8601 timestamp)
-    if (since) {
-      params.append("since", since);
-    }
+    // Defaults to one week ago if not specified
+    params.append("since", since ?? defaultSince);
 
     return this.request<GitHubNotification[]>(
       `${GITHUB_CONFIG.API_BASE}/notifications?${params}`

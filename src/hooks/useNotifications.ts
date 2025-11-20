@@ -10,7 +10,7 @@ import {
   useMemo,
   useRef,
 } from "preact/hooks";
-import { GitHubAPI } from "../api";
+import { GitHubAPI, DEFAULT_NOTIFICATIONS_PER_PAGE } from "../api";
 import { STORAGE_KEYS } from "../config";
 import { stateCache } from "../utils/stateCache";
 import { teamCache } from "../utils/teamCache";
@@ -22,12 +22,6 @@ import type {
   NotificationGroup,
   GitHubTeam,
 } from "../types";
-
-function getOneWeekAgoTimestamp(): string {
-  const oneWeekAgo = new Date();
-  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-  return oneWeekAgo.toISOString();
-}
 
 export function useNotifications(token: string | null) {
   const [notifications, setNotifications] = useState<NotificationGroup[]>([]);
@@ -456,15 +450,10 @@ export function useNotifications(token: string | null) {
 
       try {
         // Fetch notifications for the specified page from the last week
-        // Use 200 per page to ensure we capture all notifications from the last week
-        const pageNotifications = await api.getNotifications({
-          page,
-          perPage: 200,
-          since: getOneWeekAgoTimestamp(),
-        });
+        const pageNotifications = await api.getNotifications({ page });
 
         // Check if there are more pages
-        setHasMore(pageNotifications.length === 200);
+        setHasMore(pageNotifications.length === DEFAULT_NOTIFICATIONS_PER_PAGE);
 
         // Update current page
         setCurrentPage(page);
@@ -870,16 +859,9 @@ export function useNotifications(token: string | null) {
 
     try {
       // Fetch all pages up to current page from the last week
-      // Use 200 per page to ensure we capture all notifications from the last week
       const allPromises: Promise<GitHubNotification[]>[] = [];
       for (let p = 1; p <= currentPage; p++) {
-        allPromises.push(
-          api.getNotifications({
-            page: p,
-            perPage: 200,
-            since: getOneWeekAgoTimestamp(),
-          })
-        );
+        allPromises.push(api.getNotifications({ page: p }));
       }
 
       const allResults = await Promise.all(allPromises);
