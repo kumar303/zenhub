@@ -160,7 +160,20 @@ function setupMockApi(options: MockApiOptions = {}) {
     }
 
     if (urlString.includes("/notifications")) {
-      return Promise.resolve(createMockResponse(notifications));
+      // Filter by 'since' parameter if present
+      const urlObj = new URL(urlString);
+      const sinceParam = urlObj.searchParams.get("since");
+
+      let filteredNotifications = notifications;
+      if (sinceParam) {
+        const sinceDate = new Date(sinceParam);
+        filteredNotifications = notifications.filter((notif) => {
+          const notifDate = new Date(notif.updated_at);
+          return notifDate >= sinceDate;
+        });
+      }
+
+      return Promise.resolve(createMockResponse(filteredNotifications));
     }
 
     // Check for PR details
@@ -370,7 +383,9 @@ describe("<App>", () => {
         id: "19199998390",
         unread: true,
         reason: "mention",
-        updated_at: "2025-09-25T21:08:47Z",
+        updated_at: new Date(
+          Date.now() - 2 * 24 * 60 * 60 * 1000
+        ).toISOString(), // 2 days ago
         last_read_at: undefined,
         subject: {
           title:
@@ -422,7 +437,9 @@ describe("<App>", () => {
         id: "19199998390",
         unread: true,
         reason: "mention",
-        updated_at: "2025-09-25T21:08:47Z",
+        updated_at: new Date(
+          Date.now() - 2 * 24 * 60 * 60 * 1000
+        ).toISOString(), // 2 days ago
         last_read_at: undefined,
         subject: {
           title:
@@ -608,6 +625,81 @@ describe("<App>", () => {
       await waitFor(() => {
         expect(screen.queryByText("Feature request discussion")).not.toBeNull();
       });
+    });
+
+    it("should only fetch notifications from the last week", async () => {
+      const now = new Date();
+      const sixDaysAgo = new Date(now);
+      sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
+      const eightDaysAgo = new Date(now);
+      eightDaysAgo.setDate(eightDaysAgo.getDate() - 8);
+
+      const recentNotification: GitHubNotification = {
+        id: "notif-recent",
+        unread: true,
+        reason: "comment",
+        updated_at: sixDaysAgo.toISOString(),
+        last_read_at: undefined,
+        subject: {
+          title: "Recent discussion",
+          url: "https://api.github.com/repos/test/test-repo/issues/100",
+          type: "Issue",
+          latest_comment_url: undefined,
+        },
+        repository: mockRepository,
+        url: "https://api.github.com/notifications/notif-recent",
+        subscription_url:
+          "https://api.github.com/notifications/threads/notif-recent",
+      };
+
+      const oldNotification: GitHubNotification = {
+        id: "notif-old",
+        unread: true,
+        reason: "comment",
+        updated_at: eightDaysAgo.toISOString(),
+        last_read_at: undefined,
+        subject: {
+          title: "Old discussion",
+          url: "https://api.github.com/repos/test/test-repo/issues/200",
+          type: "Issue",
+          latest_comment_url: undefined,
+        },
+        repository: mockRepository,
+        url: "https://api.github.com/notifications/notif-old",
+        subscription_url:
+          "https://api.github.com/notifications/threads/notif-old",
+      };
+
+      setupMockApi({
+        notifications: [recentNotification, oldNotification],
+        pullRequests: {
+          "/issues/100": {
+            state: "open",
+          },
+          "/issues/200": {
+            state: "open",
+          },
+        },
+      });
+
+      render(<App />);
+
+      await waitFor(() => {
+        expect(screen.queryByText("LOADING")).toBeNull();
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByText("Refreshing...")).toBeNull();
+      });
+
+      const otherSection = screen.getByText(/OTHER NOTIFICATIONS/);
+      await userEvent.setup().click(otherSection);
+
+      await waitFor(() => {
+        expect(screen.queryByText("Recent discussion")).not.toBeNull();
+      });
+
+      expect(screen.queryByText("Old discussion")).toBeNull();
     });
   });
 

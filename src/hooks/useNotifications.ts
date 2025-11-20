@@ -23,6 +23,12 @@ import type {
   GitHubTeam,
 } from "../types";
 
+function getOneWeekAgoTimestamp(): string {
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  return oneWeekAgo.toISOString();
+}
+
 export function useNotifications(token: string | null) {
   const [notifications, setNotifications] = useState<NotificationGroup[]>([]);
   const [user, setUser] = useState<GitHubUser | null>(() => {
@@ -449,11 +455,16 @@ export function useNotifications(token: string | null) {
       }
 
       try {
-        // Fetch notifications for the specified page
-        const pageNotifications = await api.getNotifications(page, 50);
+        // Fetch notifications for the specified page from the last week
+        // Use 200 per page to ensure we capture all notifications from the last week
+        const pageNotifications = await api.getNotifications({
+          page,
+          perPage: 200,
+          since: getOneWeekAgoTimestamp(),
+        });
 
         // Check if there are more pages
-        setHasMore(pageNotifications.length === 50);
+        setHasMore(pageNotifications.length === 200);
 
         // Update current page
         setCurrentPage(page);
@@ -858,10 +869,17 @@ export function useNotifications(token: string | null) {
     previouslyNotified.forEach((id: string) => existingNotificationIds.add(id));
 
     try {
-      // Fetch all pages up to current page
+      // Fetch all pages up to current page from the last week
+      // Use 200 per page to ensure we capture all notifications from the last week
       const allPromises: Promise<GitHubNotification[]>[] = [];
       for (let p = 1; p <= currentPage; p++) {
-        allPromises.push(api.getNotifications(p, 50));
+        allPromises.push(
+          api.getNotifications({
+            page: p,
+            perPage: 200,
+            since: getOneWeekAgoTimestamp(),
+          })
+        );
       }
 
       const allResults = await Promise.all(allPromises);

@@ -45,11 +45,14 @@ export class GitHubAPI {
     return this.request<GitHubUser>(`${GITHUB_CONFIG.API_BASE}/user`);
   }
 
-  async getNotifications(
-    page: number = 1,
-    perPage: number = 50,
-    all: boolean = false
-  ): Promise<GitHubNotification[]> {
+  async getNotifications(options: {
+    page: number;
+    perPage: number;
+    all?: boolean;
+    since?: string;
+  }): Promise<GitHubNotification[]> {
+    const { page, perPage, all = false, since } = options;
+
     // GitHub API supports pagination with per_page and page parameters
     // By default, only fetch unread notifications to reduce load
     const params = new URLSearchParams({
@@ -61,6 +64,11 @@ export class GitHubAPI {
     // Only add 'all' parameter if explicitly requested
     if (all) {
       params.append("all", "true");
+    }
+
+    // Add since parameter to filter by date (ISO 8601 timestamp)
+    if (since) {
+      params.append("since", since);
     }
 
     return this.request<GitHubNotification[]>(
