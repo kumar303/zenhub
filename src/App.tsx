@@ -23,6 +23,7 @@ export function App() {
   const [showMenu, setShowMenu] = useState(false);
   const [showDebugModal, setShowDebugModal] = useState(false);
   const [titleAnimated, setTitleAnimated] = useState(false);
+  const [refreshDone, setRefreshDone] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -412,13 +413,22 @@ export function App() {
                   </span>
                 )}
                 <button
-                  onClick={() => refreshAllPages()}
+                  onClick={async () => {
+                    setRefreshDone(false);
+                    await refreshAllPages();
+                    setRefreshDone(true);
+                    setTimeout(() => setRefreshDone(false), 2000);
+                  }}
                   disabled={loading}
                   className={`vhs-button vhs-transition ${
                     isScrolled ? "py-1.5 px-3 text-sm" : "py-2 px-4"
                   }`}
                 >
-                  {loading ? "REFRESHING..." : "REFRESH"}
+                  {loading
+                    ? "REFRESHING"
+                    : refreshDone
+                    ? "REFRESHED"
+                    : "REFRESH"}
                 </button>
                 <button
                   onClick={handleLogout}
