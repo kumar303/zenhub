@@ -22,6 +22,7 @@ export function App() {
   );
   const [showMenu, setShowMenu] = useState(false);
   const [showDebugModal, setShowDebugModal] = useState(false);
+  const [titleAnimated, setTitleAnimated] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -306,6 +307,12 @@ export function App() {
                 className={`font-bold vhs-text vhs-glitch transition-all duration-300 flex items-center gap-3 ${
                   isScrolled ? "text-2xl" : "text-4xl"
                 }`}
+                style={{
+                  animation: !titleAnimated
+                    ? "title-flicker-on 1.5s ease-out forwards"
+                    : "none",
+                }}
+                onAnimationEnd={() => setTitleAnimated(true)}
               >
                 {/* Retro TV Icon */}
                 <svg

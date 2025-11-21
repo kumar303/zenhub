@@ -119,6 +119,72 @@ body::after {
   position: relative;
 }
 
+/* Title flicker on page load - simulates old light turning on */
+@keyframes title-flicker-on {
+  0% {
+    opacity: 0;
+  }
+  5% {
+    opacity: 1;
+    color: var(--vhs-yellow);
+    text-shadow: 0 0 15px var(--vhs-yellow);
+  }
+  10% {
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+    color: var(--vhs-white);
+    text-shadow: 0 0 20px var(--vhs-white);
+  }
+  20% {
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+    color: var(--vhs-yellow);
+  }
+  30% {
+    opacity: 0;
+  }
+  35% {
+    opacity: 1;
+    color: var(--vhs-white);
+  }
+  38% {
+    opacity: 0;
+  }
+  42% {
+    opacity: 1;
+    color: var(--vhs-yellow);
+    text-shadow: 0 0 25px var(--vhs-yellow);
+  }
+  48% {
+    opacity: 0;
+  }
+  52% {
+    opacity: 1;
+    color: var(--vhs-white);
+    text-shadow: 0 0 30px var(--vhs-white), 0 0 50px var(--vhs-white);
+  }
+  60% {
+    opacity: 1;
+    color: var(--vhs-yellow);
+  }
+  70% {
+    opacity: 1;
+    color: var(--vhs-white);
+  }
+  99% {
+    opacity: 1;
+    color: var(--vhs-dark-blue);
+    text-shadow: none;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 /* Color burst animation for expanding sections */
 @keyframes color-burst {
   0% {
