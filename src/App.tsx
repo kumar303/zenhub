@@ -369,23 +369,6 @@ export function App() {
                     strokeLinecap="round"
                   />
                   <circle cx="48" cy="4" r="2" fill="#ff00ff" />
-                  {/* Control Knobs */}
-                  <circle
-                    cx="46"
-                    cy="30"
-                    r="3"
-                    fill="#1a1a1a"
-                    stroke="#ffff00"
-                    strokeWidth="1"
-                  />
-                  <circle
-                    cx="46"
-                    cy="40"
-                    r="3"
-                    fill="#1a1a1a"
-                    stroke="#ffff00"
-                    strokeWidth="1"
-                  />
                   {/* TV Legs */}
                   <rect x="18" y="56" width="4" height="4" fill="#00ffff" />
                   <rect x="42" y="56" width="4" height="4" fill="#00ffff" />
