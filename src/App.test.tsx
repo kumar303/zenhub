@@ -233,7 +233,9 @@ describe("<App>", () => {
         id: "notif-review",
         unread: true,
         reason: "review_requested",
-        updated_at: "2025-11-14T10:00:00Z",
+        updated_at: new Date(
+          Date.now() - 1 * 24 * 60 * 60 * 1000
+        ).toISOString(),
         last_read_at: undefined,
         subject: {
           title: "Fix authentication bug",
@@ -293,7 +295,9 @@ describe("<App>", () => {
         id: "notif-timer",
         unread: true,
         reason: "review_requested",
-        updated_at: "2025-11-14T10:00:00Z",
+        updated_at: new Date(
+          Date.now() - 1 * 24 * 60 * 60 * 1000
+        ).toISOString(),
         last_read_at: undefined,
         subject: {
           title: "Timer test PR",
@@ -731,7 +735,9 @@ describe("<App>", () => {
             id: "notif-pr-no-review",
             unread: true,
             reason: "subscribed", // Not a review request
-            updated_at: "2025-11-14T10:00:00Z",
+            updated_at: new Date(
+              Date.now() - 1 * 24 * 60 * 60 * 1000
+            ).toISOString(),
             url: "https://api.github.com/notifications/threads/notif-pr-no-review",
             subscription_url:
               "https://api.github.com/notifications/threads/notif-pr-no-review/subscription",
@@ -822,7 +828,9 @@ describe("<App>", () => {
             id: "notif-team-normalized",
             unread: true,
             reason: "review_requested",
-            updated_at: "2025-11-14T10:00:00Z",
+            updated_at: new Date(
+              Date.now() - 1 * 24 * 60 * 60 * 1000
+            ).toISOString(),
             url: "https://api.github.com/notifications/threads/notif-team-normalized",
             subscription_url:
               "https://api.github.com/notifications/threads/notif-team-normalized/subscription",
@@ -892,7 +900,9 @@ describe("<App>", () => {
             id: "notif-review-1",
             unread: true,
             reason: "review_requested",
-            updated_at: "2025-11-14T10:00:00Z",
+            updated_at: new Date(
+              Date.now() - 1 * 24 * 60 * 60 * 1000
+            ).toISOString(), // 1 day ago
             subject: {
               title: "Fix payment processing bug",
               url: "https://api.github.com/repos/test/test-repo/pulls/100",
@@ -907,7 +917,9 @@ describe("<App>", () => {
             id: "notif-review-2",
             unread: true,
             reason: "review_requested",
-            updated_at: "2025-11-14T09:00:00Z",
+            updated_at: new Date(
+              Date.now() - 2 * 24 * 60 * 60 * 1000
+            ).toISOString(), // 2 days ago
             subject: {
               title: "Add new feature flag system",
               url: "https://api.github.com/repos/test/test-repo/pulls/101",
@@ -989,7 +1001,9 @@ describe("<App>", () => {
             id: "notif-crafters-review",
             unread: true,
             reason: "review_requested",
-            updated_at: "2025-11-14T10:00:00Z",
+            updated_at: new Date(
+              Date.now() - 1 * 24 * 60 * 60 * 1000
+            ).toISOString(),
             subject: {
               title: "Add widget stewardship feature",
               url: "https://api.github.com/repos/test/test-repo/pulls/300",
@@ -1170,7 +1184,9 @@ describe("<App>", () => {
           id: `notif-${i}`,
           unread: true,
           reason: i === 25 ? "mention" : "comment",
-          updated_at: "2025-11-14T10:00:00Z",
+          updated_at: new Date(
+            Date.now() - 1 * 24 * 60 * 60 * 1000
+          ).toISOString(),
           last_read_at: undefined,
           subject: {
             title: i === 25 ? "This will 404" : `Issue ${i}`,
@@ -1421,7 +1437,9 @@ describe("<App>", () => {
         id: "notif-existing",
         unread: true,
         reason: "review_requested",
-        updated_at: "2025-11-14T10:00:00Z",
+        updated_at: new Date(
+          Date.now() - 1 * 24 * 60 * 60 * 1000
+        ).toISOString(),
         subject: {
           title: "Existing PR",
           url: "https://api.github.com/repos/test/test-repo/pulls/100",
@@ -1464,7 +1482,9 @@ describe("<App>", () => {
         id: "notif-new",
         unread: true,
         reason: "review_requested",
-        updated_at: "2025-11-14T11:00:00Z",
+        updated_at: new Date(
+          Date.now() - 0.5 * 24 * 60 * 60 * 1000
+        ).toISOString(),
         subject: {
           title: "New PR needs review",
           url: "https://api.github.com/repos/test/test-repo/pulls/101",
@@ -1534,7 +1554,9 @@ describe("<App>", () => {
         id: "notif-existing",
         unread: true,
         reason: "review_requested",
-        updated_at: "2025-11-14T10:00:00Z",
+        updated_at: new Date(
+          Date.now() - 1 * 24 * 60 * 60 * 1000
+        ).toISOString(),
         subject: {
           title: "Existing PR",
           url: "https://api.github.com/repos/test/test-repo/pulls/100",
@@ -1573,7 +1595,9 @@ describe("<App>", () => {
         id: "notif-mention",
         unread: true,
         reason: "mention",
-        updated_at: "2025-11-14T11:00:00Z",
+        updated_at: new Date(
+          Date.now() - 0.5 * 24 * 60 * 60 * 1000
+        ).toISOString(),
         subject: {
           title: "PR with new mention",
           url: "https://api.github.com/repos/test/test-repo/pulls/102",
@@ -1627,7 +1651,9 @@ describe("<App>", () => {
         id: "notif-existing",
         unread: true,
         reason: "review_requested",
-        updated_at: "2025-11-14T10:00:00Z",
+        updated_at: new Date(
+          Date.now() - 1 * 24 * 60 * 60 * 1000
+        ).toISOString(),
         subject: {
           title: "Existing PR",
           url: "https://api.github.com/repos/test/test-repo/pulls/100",
@@ -1679,7 +1705,9 @@ describe("<App>", () => {
         id: "notif-team-review",
         unread: true,
         reason: "review_requested",
-        updated_at: "2025-11-14T11:00:00Z",
+        updated_at: new Date(
+          Date.now() - 0.5 * 24 * 60 * 60 * 1000
+        ).toISOString(),
         subject: {
           title: "Team PR needs review",
           url: "https://api.github.com/repos/test/test-repo/pulls/103",
@@ -1736,7 +1764,9 @@ describe("<App>", () => {
         id: "notif-existing",
         unread: true,
         reason: "subscribed",
-        updated_at: "2025-11-14T09:00:00Z",
+        updated_at: new Date(
+          Date.now() - 2 * 24 * 60 * 60 * 1000
+        ).toISOString(),
         last_read_at: undefined,
         subject: {
           title: "Existing PR",
@@ -1754,7 +1784,9 @@ describe("<App>", () => {
         id: "notif-author",
         unread: true,
         reason: "author",
-        updated_at: "2025-11-14T11:00:00Z",
+        updated_at: new Date(
+          Date.now() - 0.5 * 24 * 60 * 60 * 1000
+        ).toISOString(),
         last_read_at: undefined,
         subject: {
           title: "I created this PR",
