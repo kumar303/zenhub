@@ -709,6 +709,102 @@ describe("<App>", () => {
 
       expect(screen.queryByText("Old discussion")).toBeNull();
     });
+
+    it("should send web notifications for new mentions on same PR after previous notifications", async () => {
+      const firstMention: GitHubNotification = {
+        id: "notif-mention-1",
+        unread: true,
+        reason: "mention",
+        updated_at: new Date(
+          Date.now() - 2 * 24 * 60 * 60 * 1000
+        ).toISOString(),
+        last_read_at: undefined,
+        subject: {
+          title: "Important PR discussion",
+          url: "https://api.github.com/repos/test/test-repo/pulls/950",
+          type: "PullRequest",
+          latest_comment_url: undefined,
+        },
+        repository: mockRepository,
+        url: "https://api.github.com/notifications/notif-mention-1",
+        subscription_url:
+          "https://api.github.com/notifications/threads/notif-mention-1",
+      };
+
+      delete (global as any).Notification;
+      const mockNotification = vi.fn();
+      global.Notification = mockNotification as any;
+      (global.Notification as any).permission = "granted";
+
+      setupMockApi({
+        notifications: [firstMention],
+        pullRequests: {
+          "/pulls/950": {
+            state: "open",
+          },
+        },
+      });
+
+      const user = userEvent.setup();
+      render(<App />);
+
+      await waitFor(() => {
+        expect(screen.queryByText("LOADING")).toBeNull();
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByText("Refreshing...")).toBeNull();
+      });
+
+      expect(mockNotification).not.toHaveBeenCalled();
+
+      const secondMention: GitHubNotification = {
+        id: "notif-mention-2",
+        unread: true,
+        reason: "mention",
+        updated_at: new Date(
+          Date.now() - 0.5 * 24 * 60 * 60 * 1000
+        ).toISOString(),
+        last_read_at: undefined,
+        subject: {
+          title: "Important PR discussion",
+          url: "https://api.github.com/repos/test/test-repo/pulls/950",
+          type: "PullRequest",
+          latest_comment_url: undefined,
+        },
+        repository: mockRepository,
+        url: "https://api.github.com/notifications/notif-mention-2",
+        subscription_url:
+          "https://api.github.com/notifications/threads/notif-mention-2",
+      };
+
+      setupMockApi({
+        notifications: [firstMention, secondMention],
+        pullRequests: {
+          "/pulls/950": {
+            state: "open",
+          },
+        },
+      });
+
+      const refreshButton = screen.getByText("REFRESH");
+      await user.click(refreshButton);
+
+      await waitFor(() => {
+        expect(screen.queryByText("LOADING")).toBeNull();
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByText("Refreshing...")).toBeNull();
+      });
+
+      expect(mockNotification).toHaveBeenCalledWith(
+        "[Mention] Important PR discussion",
+        expect.objectContaining({
+          body: "test/test-repo",
+        })
+      );
+    });
   });
 
   describe("organizing", () => {

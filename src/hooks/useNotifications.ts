@@ -610,11 +610,17 @@ export function useNotifications(token: string | null) {
       for (const group of prominentGroups) {
         // Check if ANY notification in the group is new
         let hasNewNotification = false;
+        const newNotifsInGroup: string[] = [];
+
         if (newNotificationIds) {
           for (const notification of group.notifications) {
             if (newNotificationIds.has(notification.id)) {
               hasNewNotification = true;
-              break;
+              // Check if we haven't notified about this specific notification ID yet
+              const notifKey = `notified_${notification.id}`;
+              if (!sessionStorage.getItem(notifKey)) {
+                newNotifsInGroup.push(notification.id);
+              }
             }
           }
         } else {
@@ -622,11 +628,15 @@ export function useNotifications(token: string | null) {
           hasNewNotification = true;
         }
 
-        // Use the group ID for tracking, not individual notification
-        const key = `notified_${group.id}`;
-
-        if (!sessionStorage.getItem(key) && hasNewNotification) {
-          sessionStorage.setItem(key, "true");
+        // Only send notification if there are actually new notifications we haven't alerted about
+        if (
+          newNotifsInGroup.length > 0 ||
+          (!newNotificationIds && hasNewNotification)
+        ) {
+          // Mark these specific notification IDs as notified
+          newNotifsInGroup.forEach((notifId) => {
+            sessionStorage.setItem(`notified_${notifId}`, "true");
+          });
 
           console.log(
             `[WebNotification] Triggering notification for: ${group.subject.title} (${group.id})`
