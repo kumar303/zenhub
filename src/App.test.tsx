@@ -539,7 +539,9 @@ describe("<App>", () => {
         id: "notif-comment-1",
         unread: true,
         reason: "comment",
-        updated_at: "2025-11-17T10:00:00Z",
+        updated_at: new Date(
+          Date.now() - 3 * 24 * 60 * 60 * 1000
+        ).toISOString(),
         last_read_at: undefined,
         subject: {
           title: "Feature request discussion",
@@ -593,7 +595,9 @@ describe("<App>", () => {
         id: "notif-comment-2",
         unread: true,
         reason: "comment",
-        updated_at: "2025-11-17T11:00:00Z",
+        updated_at: new Date(
+          Date.now() - 0.5 * 24 * 60 * 60 * 1000
+        ).toISOString(),
         last_read_at: undefined,
         subject: {
           title: "Feature request discussion",
@@ -1274,7 +1278,9 @@ describe("<App>", () => {
         id: "notif-pending",
         unread: true,
         reason: "review_requested",
-        updated_at: "2025-11-17T10:00:00Z",
+        updated_at: new Date(
+          Date.now() - 3 * 24 * 60 * 60 * 1000
+        ).toISOString(),
         last_read_at: undefined,
         subject: {
           title: "New feature implementation",
@@ -1317,7 +1323,9 @@ describe("<App>", () => {
         id: "notif-comment",
         unread: true,
         reason: "comment",
-        updated_at: "2025-11-17T10:30:00Z",
+        updated_at: new Date(
+          Date.now() - 3 * 24 * 60 * 60 * 1000
+        ).toISOString(),
         last_read_at: undefined,
         subject: {
           title: "Discussion about implementation",
@@ -1367,7 +1375,9 @@ describe("<App>", () => {
         id: "notif-own-issue",
         unread: true,
         reason: "author",
-        updated_at: "2025-11-17T11:00:00Z",
+        updated_at: new Date(
+          Date.now() - 0.5 * 24 * 60 * 60 * 1000
+        ).toISOString(),
         last_read_at: undefined,
         subject: {
           title: "My issue",
