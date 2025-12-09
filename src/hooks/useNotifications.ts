@@ -853,19 +853,23 @@ export function useNotifications(token: string | null) {
     setError(null);
 
     // Store current notification IDs to identify new ones
-    // Note: We need to track ALL notification IDs we've seen, not just the ones we display
-    // This prevents closed/merged issues from triggering web notifications
     const existingNotificationIds = new Set(
       notifications.flatMap((group) => group.notifications.map((n) => n.id))
     );
 
-    // Also add any notification IDs we've previously notified about
-    // to prevent re-notifying for closed/merged items
+    // Load previously notified IDs, but ONLY add them to existingNotificationIds
+    // if we have proof we actually sent a browser notification (the notified_${id} marker)
+    // This prevents false positives where an ID was "seen" but never notified
     const previouslyNotifiedKey = "previously_notified_ids";
     const previouslyNotified = JSON.parse(
       sessionStorage.getItem(previouslyNotifiedKey) || "[]"
     );
-    previouslyNotified.forEach((id: string) => existingNotificationIds.add(id));
+    // Only exclude IDs we've actually notified about
+    previouslyNotified.forEach((id: string) => {
+      if (sessionStorage.getItem(`notified_${id}`)) {
+        existingNotificationIds.add(id);
+      }
+    });
 
     try {
       // Fetch all pages up to current page from the last week
@@ -939,13 +943,22 @@ export function useNotifications(token: string | null) {
         newNotificationIds
       );
 
-      // Save all notification IDs we've seen to prevent re-notifying for closed/merged items
-      const allSeenIds = Array.from(existingNotificationIds);
+      // Save notification IDs we've ACTUALLY NOTIFIED about to prevent re-notifying
+      // IMPORTANT: Only save IDs for notifications we sent browser notifications for
+      // NOT all notification IDs we've seen (which could include filtered-out notifications)
+      const notifiedIds: string[] = [];
       for (const notification of allNotifications) {
-        allSeenIds.push(notification.id);
+        // Check if we have the "notified_${id}" marker in sessionStorage
+        if (sessionStorage.getItem(`notified_${notification.id}`)) {
+          notifiedIds.push(notification.id);
+        }
       }
+      // Combine with existing previously notified IDs
+      const allNotifiedIds = Array.from(
+        new Set([...previouslyNotified, ...notifiedIds])
+      );
       // Keep only the last 1000 IDs to prevent unbounded growth
-      const recentIds = allSeenIds.slice(-1000);
+      const recentIds = allNotifiedIds.slice(-1000);
       sessionStorage.setItem(previouslyNotifiedKey, JSON.stringify(recentIds));
     } catch (err: any) {
       if (err.message === "UNAUTHORIZED") {

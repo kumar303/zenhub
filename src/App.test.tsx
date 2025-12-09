@@ -1655,6 +1655,118 @@ describe("<App>", () => {
       expect(mockNotification).not.toHaveBeenCalled();
     });
 
+    it("should send web notifications for mentions that were previously seen but not notified", async () => {
+      // THE REAL BUG SCENARIO:
+      // 1. User opens app, a notification appears but gets filtered somehow
+      // 2. On refresh, that notification ID is saved to "previously_notified_ids"
+      // 3. Later on another refresh, the notification reappears (maybe was closed, now reopened)
+      // 4. BUG: No notification is sent because the ID is in "previously_notified_ids"
+      //    even though we never actually sent a browser notification for it
+
+      const otherNotification: GitHubNotification = {
+        id: "notif-other",
+        unread: true,
+        reason: "subscribed",
+        updated_at: new Date(
+          Date.now() - 2 * 24 * 60 * 60 * 1000
+        ).toISOString(),
+        subject: {
+          title: "Some other PR",
+          url: "https://api.github.com/repos/test/test-repo/pulls/100",
+          type: "PullRequest",
+        },
+        repository: mockRepository,
+        url: "https://api.github.com/notifications/notif-other",
+        subscription_url:
+          "https://api.github.com/notifications/threads/notif-other",
+      };
+
+      // Start with just one notification
+      setupMockApi({
+        notifications: [otherNotification],
+        pullRequests: {
+          "/pulls/100": {
+            state: "open",
+          },
+        },
+      });
+
+      render(<App />);
+
+      // Wait for initial load
+      await waitFor(() => {
+        expect(screen.queryByText("LOADING")).toBeNull();
+      });
+
+      // Now simulate the buggy scenario: a notification ID is in previously_notified_ids
+      // but we never sent a browser notification for it
+      sessionStorage.setItem(
+        "previously_notified_ids",
+        JSON.stringify(["20717875100"])
+      );
+
+      const mentionNotification: GitHubNotification = {
+        id: "20717875100", // Real ID from user's debug output
+        unread: true,
+        reason: "mention",
+        updated_at: new Date(Date.now() - 16 * 60 * 60 * 1000).toISOString(), // 16 hours ago
+        subject: {
+          title:
+            "Refine existing dashboard, alerting and monitoring for checkout extensions",
+          url: "https://api.github.com/repos/shop/issues-checkout-extensibility/issues/258",
+          type: "Issue",
+        },
+        repository: mockRepository,
+        url: "https://api.github.com/notifications/20717875100",
+        subscription_url:
+          "https://api.github.com/notifications/threads/20717875100",
+      };
+
+      // On refresh, the mention notification appears
+      setupMockApi({
+        notifications: [otherNotification, mentionNotification],
+        pullRequests: {
+          "/pulls/100": {
+            state: "open",
+          },
+          "/issues/258": {
+            state: "open",
+          },
+        },
+      });
+
+      // Trigger refresh
+      const refreshButton = screen.getByText("REFRESH");
+      fireEvent.click(refreshButton);
+
+      // Wait for refresh to complete
+      await waitFor(() => {
+        expect(screen.queryByText("REFRESHING")).toBeNull();
+      });
+
+      // The mention appears in the list
+      await waitFor(() => {
+        expect(screen.getByText(/MENTIONS & REPLIES/)).toBeInTheDocument();
+      });
+
+      // BUG WITH OLD CODE: Browser notification NOT sent because ID is in "previously_notified_ids"
+      // FIXED: Browser notification IS sent because we only track IDs we actually notified about
+      await waitFor(
+        () => {
+          expect(mockNotification).toHaveBeenCalledTimes(1);
+        },
+        { timeout: 3000 }
+      );
+
+      expect(mockNotification).toHaveBeenCalledWith(
+        "[Mention] Refine existing dashboard, alerting and monitoring for checkout extensions",
+        expect.objectContaining({
+          body: "test/test-repo",
+          requireInteraction: true,
+        })
+      );
+    });
+
     it("should send web notifications for newly received mentions after refresh", async () => {
       const existingNotification: GitHubNotification = {
         id: "notif-existing",
@@ -1865,6 +1977,7 @@ describe("<App>", () => {
 
       expect(mockNotification).not.toHaveBeenCalled();
     });
+
     it("should send web notifications for newly received author notifications after refresh", async () => {
       const existingNotification: GitHubNotification = {
         id: "notif-existing",
