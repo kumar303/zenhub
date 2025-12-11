@@ -486,8 +486,8 @@ export function useNotifications(token: string | null) {
 
         // Filter notifications: only allowed reasons
         // We're already using participating=true at API level to reduce initial results
-        const filtered = allNotifications.filter(
-          (n) => allowedReasons.has(n.reason) || n.subject.type === "CheckSuite" // Include CheckSuite notifications
+        const filtered = allNotifications.filter((n) =>
+          allowedReasons.has(n.reason)
         );
 
         // NOTE: We don't filter out comment notifications on authored PRs because:
