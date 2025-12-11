@@ -232,6 +232,11 @@ export function useNotifications(token: string | null) {
             groups[key].isOwnContent = true;
             groups[key].isProminentForMe = true;
           }
+
+          // Check for assignments - issues/PRs assigned to you are important
+          if (notification.reason === "assign") {
+            groups[key].isProminentForMe = true;
+          }
         }
       }
 

@@ -990,6 +990,61 @@ describe("<App>", () => {
       // Should NOT appear in Team Review Requests
       expect(screen.queryByText(/TEAM REVIEW REQUESTS/)).toBeNull();
     });
+
+    it("should show assigned issues in Needs Your Attention (as prominent)", async () => {
+      // BUG: Assignments are not marked as prominent, so they appear in "Other Notifications"
+      // They should be treated as important because they're directly assigned to you
+
+      const assignedIssue: GitHubNotification = {
+        id: "notif-assigned",
+        unread: true,
+        reason: "assign",
+        updated_at: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+        subject: {
+          title:
+            "OrderConfirmationError: No receipt available on thankYou page",
+          url: "https://api.github.com/repos/shop/issues/issues/635",
+          type: "Issue",
+        },
+        repository: mockRepository,
+        url: "https://api.github.com/notifications/notif-assigned",
+        subscription_url:
+          "https://api.github.com/notifications/threads/notif-assigned",
+      };
+
+      setupMockApi({
+        notifications: [assignedIssue],
+        pullRequests: {
+          "/issues/635": {
+            state: "open",
+          },
+        },
+      });
+
+      render(<App />);
+
+      await waitFor(() => {
+        expect(screen.queryByText("LOADING")).toBeNull();
+      });
+
+      // BUG: Assignment is NOT prominent, so it appears in "Other Notifications"
+      // FIX: Assignment should be prominent, appearing in "Needs Your Attention"
+      await waitFor(() => {
+        expect(screen.getByText(/NEEDS YOUR ATTENTION/)).toBeInTheDocument();
+      });
+
+      const user = userEvent.setup();
+      const needsAttentionSection = screen.getByText(/NEEDS YOUR ATTENTION/);
+      await user.click(needsAttentionSection);
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(
+            "OrderConfirmationError: No receipt available on thankYou page"
+          )
+        ).toBeInTheDocument();
+      });
+    });
   });
 
   describe("filtering and hiding", () => {
