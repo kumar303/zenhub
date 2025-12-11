@@ -487,18 +487,14 @@ export function useNotifications(token: string | null) {
         // Filter notifications: only allowed reasons
         // We're already using participating=true at API level to reduce initial results
         const filtered = allNotifications.filter(
-          (n) =>
-            (allowedReasons.has(n.reason) || n.subject.type === "CheckSuite") && // Include CheckSuite notifications
-            // Exclude comment notifications on threads you authored (likely your own comments)
-            !(
-              n.reason === "comment" &&
-              allNotifications.some(
-                (other) =>
-                  other.subject.url === n.subject.url &&
-                  other.reason === "author"
-              )
-            )
+          (n) => allowedReasons.has(n.reason) || n.subject.type === "CheckSuite" // Include CheckSuite notifications
         );
+
+        // NOTE: We don't filter out comment notifications on authored PRs because:
+        // 1. GitHub API doesn't tell us WHO made the comment
+        // 2. Fetching each comment to check authorship would require many additional API calls
+        // 3. Better to show all comments (including potentially our own) than miss others' comments
+        // 4. Users can dismiss their own comment notifications manually if needed
 
         // Process and group notifications
         const processed = await processNotifications(filtered, teams, userData);

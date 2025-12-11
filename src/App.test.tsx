@@ -2076,5 +2076,93 @@ describe("<App>", () => {
         })
       );
     });
+
+    it("should NOT filter out comment-only notifications on authored PRs", async () => {
+      // THE CLEAREST BUG SCENARIO:
+      // 1. User opens the app
+      // 2. GitHub API has BOTH author + comment notifications for a PR
+      // 3. But user previously dismissed the author notification
+      // 4. BUGGY CODE: Comment notification is filtered out → PR doesn't appear at all!
+      // 5. FIXED CODE: Comment notification kept → PR appears in "Other Notifications"
+
+      const oldAuthorNotification: GitHubNotification = {
+        id: "notif-author-dismissed",
+        unread: true,
+        reason: "author",
+        updated_at: new Date(
+          Date.now() - 5 * 24 * 60 * 60 * 1000
+        ).toISOString(),
+        subject: {
+          title: "My PR with comments",
+          url: "https://api.github.com/repos/test/test-repo/pulls/700",
+          type: "PullRequest",
+        },
+        repository: mockRepository,
+        url: "https://api.github.com/notifications/notif-author-dismissed",
+        subscription_url:
+          "https://api.github.com/notifications/threads/notif-author-dismissed",
+      };
+
+      const commentNotification: GitHubNotification = {
+        id: "notif-comment-only",
+        unread: true,
+        reason: "comment",
+        updated_at: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+        subject: {
+          title: "My PR with comments",
+          url: "https://api.github.com/repos/test/test-repo/pulls/700",
+          type: "PullRequest",
+        },
+        repository: mockRepository,
+        url: "https://api.github.com/notifications/notif-comment-only",
+        subscription_url:
+          "https://api.github.com/notifications/threads/notif-comment-only",
+      };
+
+      // Simulate that the author notification was previously dismissed
+      mockLocalStorage.data["dismissed_notifications"] = JSON.stringify([
+        "notif-author-dismissed",
+      ]);
+
+      // Both notifications in API, but author is dismissed
+      setupMockApi({
+        notifications: [oldAuthorNotification, commentNotification],
+        pullRequests: {
+          "/pulls/700": {
+            state: "open",
+          },
+        },
+      });
+
+      render(<App />);
+
+      await waitFor(() => {
+        expect(screen.queryByText("LOADING")).toBeNull();
+      });
+
+      // THE KEY TEST:
+      // BUGGY CODE: Comment is filtered out (because author notification exists in API)
+      //             → No notifications shown (author was dismissed, comment was filtered)
+      //             → Page shows "No notifications!"
+      // FIXED CODE: Comment NOT filtered → PR appears
+
+      await waitFor(() => {
+        expect(screen.queryByText("No notifications!")).not.toBeInTheDocument();
+      });
+
+      // Find and expand whichever section has the notification
+      const user = userEvent.setup();
+      const sections = screen.queryAllByText(
+        /YOUR ACTIVITY|OTHER NOTIFICATIONS|NEEDS YOUR ATTENTION/
+      );
+      if (sections.length > 0) {
+        await user.click(sections[0]);
+      }
+
+      // The PR should now be visible
+      await waitFor(() => {
+        expect(screen.getByText("My PR with comments")).toBeInTheDocument();
+      });
+    });
   });
 });
