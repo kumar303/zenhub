@@ -60,10 +60,11 @@ export class GitHubAPI {
       since,
     } = options;
 
-    // Default to fetching notifications from the last week
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    const defaultSince = oneWeekAgo.toISOString();
+    // Default to fetching notifications from the last 30 days
+    // This ensures review requests don't disappear just because they're a bit older
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const defaultSince = thirtyDaysAgo.toISOString();
 
     // GitHub API supports pagination with per_page and page parameters
     const params = new URLSearchParams({
@@ -78,7 +79,7 @@ export class GitHubAPI {
     }
 
     // Add since parameter to filter by date (ISO 8601 timestamp)
-    // Defaults to one week ago if not specified
+    // Defaults to 30 days ago if not specified
     params.append("since", since ?? defaultSince);
 
     return this.request<GitHubNotification[]>(

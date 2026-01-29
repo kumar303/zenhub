@@ -644,18 +644,18 @@ describe("<App>", () => {
       });
     });
 
-    it("should only fetch notifications from the last week", async () => {
+    it("should only fetch notifications from the last 30 days", async () => {
       const now = new Date();
-      const sixDaysAgo = new Date(now);
-      sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
-      const eightDaysAgo = new Date(now);
-      eightDaysAgo.setDate(eightDaysAgo.getDate() - 8);
+      const twentyDaysAgo = new Date(now);
+      twentyDaysAgo.setDate(twentyDaysAgo.getDate() - 20);
+      const thirtyFiveDaysAgo = new Date(now);
+      thirtyFiveDaysAgo.setDate(thirtyFiveDaysAgo.getDate() - 35);
 
       const recentNotification: GitHubNotification = {
         id: "notif-recent",
         unread: true,
         reason: "comment",
-        updated_at: sixDaysAgo.toISOString(),
+        updated_at: twentyDaysAgo.toISOString(),
         last_read_at: undefined,
         subject: {
           title: "Recent discussion",
@@ -673,7 +673,7 @@ describe("<App>", () => {
         id: "notif-old",
         unread: true,
         reason: "comment",
-        updated_at: eightDaysAgo.toISOString(),
+        updated_at: thirtyFiveDaysAgo.toISOString(),
         last_read_at: undefined,
         subject: {
           title: "Old discussion",
@@ -2302,6 +2302,82 @@ describe("<App>", () => {
       await waitFor(() => {
         expect(
           screen.getByText("prefer playwright click over check for flaky attribute")
+        ).toBeInTheDocument();
+      });
+    });
+
+    it("should show review requests older than 7 days", async () => {
+      // This test verifies the fix for: https://github.com/shop/world/pull/270657
+      // PR #270657 was last updated 8 days ago but user is still a requested reviewer.
+      // The app only fetches notifications from the last 7 days, so it doesn't appear.
+
+      const eightDaysAgo = new Date();
+      eightDaysAgo.setDate(eightDaysAgo.getDate() - 8);
+
+      const oldReviewRequestPR: GitHubNotification = {
+        id: "notif-old-review",
+        unread: false, // Likely marked as read since user probably visited it
+        reason: "review_requested",
+        updated_at: eightDaysAgo.toISOString(),
+        subject: {
+          title: "Init sandbox using ArrayBuffers",
+          url: "https://api.github.com/repos/shop/world/pulls/270657",
+          type: "PullRequest",
+        },
+        repository: {
+          id: 1,
+          name: "world",
+          full_name: "shop/world",
+          owner: {
+            login: "shop",
+            id: 1,
+            avatar_url: "https://avatars.githubusercontent.com/u/1",
+            url: "https://api.github.com/users/shop",
+            html_url: "https://github.com/shop",
+          },
+          html_url: "https://github.com/shop/world",
+          description: "Shop repo",
+        },
+        url: "https://api.github.com/notifications/notif-old-review",
+        subscription_url:
+          "https://api.github.com/notifications/threads/notif-old-review",
+      };
+
+      setupMockApi({
+        notifications: [oldReviewRequestPR],
+        pullRequests: {
+          "/pulls/270657": {
+            state: "open",
+            draft: false,
+            requested_reviewers: [{ login: "kumar303" }], // User is still a reviewer
+          },
+        },
+      });
+
+      render(<App />);
+
+      await waitFor(() => {
+        expect(screen.queryByText("Refreshing...")).toBeNull();
+      });
+
+      // Without the fix, this test will fail because notifications older than
+      // 7 days are filtered out by the 'since' parameter
+      await waitFor(() => {
+        expect(screen.queryByText("No notifications! 🎉")).toBeNull();
+      });
+
+      // Should show the review request even though it's from 8 days ago
+      const reviewRequestsHeader = await screen.findByText(/REVIEW REQUESTS/);
+      expect(reviewRequestsHeader).toBeInTheDocument();
+
+      // Expand the section
+      const user = userEvent.setup();
+      await user.click(reviewRequestsHeader);
+
+      // Verify the PR title is visible
+      await waitFor(() => {
+        expect(
+          screen.getByText("Init sandbox using ArrayBuffers")
         ).toBeInTheDocument();
       });
     });
