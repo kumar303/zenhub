@@ -163,6 +163,7 @@ function setupMockApi(options: MockApiOptions = {}) {
       // Filter by 'since' parameter if present
       const urlObj = new URL(urlString);
       const sinceParam = urlObj.searchParams.get("since");
+      const allParam = urlObj.searchParams.get("all");
 
       let filteredNotifications = notifications;
       if (sinceParam) {
@@ -171,6 +172,14 @@ function setupMockApi(options: MockApiOptions = {}) {
           const notifDate = new Date(notif.updated_at);
           return notifDate >= sinceDate;
         });
+      }
+
+      // GitHub API behavior: by default, only return unread notifications
+      // unless all=true is specified
+      if (allParam !== "true") {
+        filteredNotifications = filteredNotifications.filter(
+          (notif) => notif.unread
+        );
       }
 
       return Promise.resolve(createMockResponse(filteredNotifications));
@@ -2217,6 +2226,83 @@ describe("<App>", () => {
       // The PR should now be visible
       await waitFor(() => {
         expect(screen.getByText("My PR with comments")).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe("read notifications", () => {
+    it("should show read review request notifications", async () => {
+      // This test verifies the fix for: https://github.com/shop/world/pull/385615
+      // When a notification is marked as read (by visiting the PR on GitHub),
+      // it should still appear in Zenhub if you're a requested reviewer.
+
+      const readReviewRequestPR: GitHubNotification = {
+        id: "notif-read-review",
+        unread: false, // ← Key: notification is marked as read
+        reason: "review_requested",
+        updated_at: new Date(
+          Date.now() - 1 * 24 * 60 * 60 * 1000
+        ).toISOString(),
+        subject: {
+          title: "prefer playwright click over check for flaky attribute",
+          url: "https://api.github.com/repos/shop/world/pulls/385615",
+          type: "PullRequest",
+        },
+        repository: {
+          id: 1,
+          name: "world",
+          full_name: "shop/world",
+          owner: {
+            login: "shop",
+            id: 1,
+            avatar_url: "https://avatars.githubusercontent.com/u/1",
+            url: "https://api.github.com/users/shop",
+            html_url: "https://github.com/shop",
+          },
+          html_url: "https://github.com/shop/world",
+          description: "Shop repo",
+        },
+        url: "https://api.github.com/notifications/notif-read-review",
+        subscription_url:
+          "https://api.github.com/notifications/threads/notif-read-review",
+      };
+
+      setupMockApi({
+        notifications: [readReviewRequestPR],
+        pullRequests: {
+          "/pulls/385615": {
+            state: "open",
+            draft: false,
+            requested_reviewers: [{ login: "kumar303" }], // User is still a reviewer
+          },
+        },
+      });
+
+      render(<App />);
+
+      await waitFor(() => {
+        expect(screen.queryByText("Refreshing...")).toBeNull();
+      });
+
+      // Without the fix (all: true), this test will fail because read
+      // notifications are filtered out by GitHub API's default behavior
+      await waitFor(() => {
+        expect(screen.queryByText("No notifications! 🎉")).toBeNull();
+      });
+
+      // Should show the review request even though it's marked as read
+      const reviewRequestsHeader = await screen.findByText(/REVIEW REQUESTS/);
+      expect(reviewRequestsHeader).toBeInTheDocument();
+
+      // Expand the section
+      const user = userEvent.setup();
+      await user.click(reviewRequestsHeader);
+
+      // Verify the PR title is visible
+      await waitFor(() => {
+        expect(
+          screen.getByText("prefer playwright click over check for flaky attribute")
+        ).toBeInTheDocument();
       });
     });
   });

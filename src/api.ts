@@ -66,7 +66,6 @@ export class GitHubAPI {
     const defaultSince = oneWeekAgo.toISOString();
 
     // GitHub API supports pagination with per_page and page parameters
-    // By default, only fetch unread notifications to reduce load
     const params = new URLSearchParams({
       per_page: perPage.toString(),
       page: page.toString(),

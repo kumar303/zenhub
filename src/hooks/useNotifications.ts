@@ -455,7 +455,8 @@ export function useNotifications(token: string | null) {
 
       try {
         // Fetch notifications for the specified page from the last week
-        const pageNotifications = await api.getNotifications({ page });
+        // Include both read and unread so PRs where you're a reviewer stay visible
+        const pageNotifications = await api.getNotifications({ page, all: true });
 
         // Check if there are more pages
         setHasMore(pageNotifications.length === DEFAULT_NOTIFICATIONS_PER_PAGE);
@@ -874,9 +875,10 @@ export function useNotifications(token: string | null) {
 
     try {
       // Fetch all pages up to current page from the last week
+      // Include both read and unread so PRs where you're a reviewer stay visible
       const allPromises: Promise<GitHubNotification[]>[] = [];
       for (let p = 1; p <= currentPage; p++) {
-        allPromises.push(api.getNotifications({ page: p }));
+        allPromises.push(api.getNotifications({ page: p, all: true }));
       }
 
       const allResults = await Promise.all(allPromises);
