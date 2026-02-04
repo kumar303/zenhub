@@ -430,6 +430,24 @@ export function useNotifications(token: string | null) {
     [api, user]
   );
 
+  const showSessionExpiredNotification = useCallback(() => {
+    if (!("Notification" in window) || Notification.permission !== "granted") {
+      return;
+    }
+
+    const notification = new Notification("Session Expired", {
+      body: "Your GitHub session has expired. Please sign in again.",
+      icon: "https://github.githubassets.com/favicons/favicon.png",
+      tag: "session-expired",
+      requireInteraction: true,
+    });
+
+    notification.onclick = () => {
+      window.focus();
+      notification.close();
+    };
+  }, []);
+
   const fetchNotifications = useCallback(
     async (options: {
       page: number;
@@ -566,6 +584,7 @@ export function useNotifications(token: string | null) {
       } catch (err: any) {
         if (err.message === "UNAUTHORIZED") {
           setError("Authentication expired. Please login again.");
+          showSessionExpiredNotification();
           // Don't reload immediately, let user see the error
           setTimeout(() => {
             localStorage.removeItem(STORAGE_KEYS.TOKEN);
@@ -588,6 +607,7 @@ export function useNotifications(token: string | null) {
       error,
       notifications,
       isFirstSessionLoad,
+      showSessionExpiredNotification,
     ]
   );
 
@@ -966,6 +986,7 @@ export function useNotifications(token: string | null) {
     } catch (err: any) {
       if (err.message === "UNAUTHORIZED") {
         setError("Authentication expired. Please login again.");
+        showSessionExpiredNotification();
         setTimeout(() => {
           localStorage.removeItem(STORAGE_KEYS.TOKEN);
           localStorage.removeItem(STORAGE_KEYS.USER);
@@ -984,6 +1005,7 @@ export function useNotifications(token: string | null) {
     notifications,
     user,
     userTeams,
+    showSessionExpiredNotification,
   ]);
 
   // Update the ref whenever refreshAllPages changes

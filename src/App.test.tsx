@@ -1585,6 +1585,63 @@ describe("<App>", () => {
   describe("web notifications", () => {
     const mockNotification = vi.fn();
 
+    it("should send web notification when session expires during background refresh", async () => {
+      // Set up initial successful API response
+      setupMockApi({
+        notifications: [],
+      });
+
+      const user = userEvent.setup();
+      render(<App />);
+
+      // Wait for initial load
+      await waitFor(() => {
+        expect(screen.queryByText("LOADING")).toBeNull();
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByText("Refreshing...")).toBeNull();
+      });
+
+      // Mock Notification API should not have been called yet
+      expect(mockNotification).not.toHaveBeenCalled();
+
+      // Now simulate a 401 response on refresh (session expired)
+      const mockFetch = vi.mocked(global.fetch);
+      mockFetch.mockImplementation((url) => {
+        const urlString = url.toString();
+        if (urlString.includes("/notifications")) {
+          return Promise.resolve(
+            createMockResponse({ message: "Unauthorized" }, 401)
+          );
+        }
+        return Promise.resolve(createMockResponse({}));
+      });
+
+      // Trigger manual refresh (simulates background refresh)
+      const refreshButton = screen.getByText("REFRESH");
+      await user.click(refreshButton);
+
+      // Wait for error to be handled
+      await waitFor(() => {
+        expect(
+          screen.queryByText(/Authentication expired/i)
+        ).not.toBeNull();
+      });
+
+      // Verify session expired web notification was sent
+      await waitFor(() => {
+        expect(mockNotification).toHaveBeenCalledWith(
+          "Session Expired",
+          expect.objectContaining({
+            body: "Your GitHub session has expired. Please sign in again.",
+            tag: "session-expired",
+            requireInteraction: true,
+          })
+        );
+      });
+    });
+
     beforeEach(() => {
       // Clear any existing Notification mock
       delete (global as any).Notification;
