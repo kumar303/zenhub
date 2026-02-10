@@ -142,16 +142,14 @@ export class GitHubAPI {
           (reviewer: any) => reviewer.login === username
         );
 
-      // If there are team reviewers but the user isn't personally requested,
-      // this is likely a team review request
-      // ALSO: If there are NO reviewers at all (neither team nor personal),
+      // If there are NO reviewers at all (neither team nor personal),
       // but we have a review_requested notification, it's likely an orphaned
       // team review request (where another team member already reviewed)
       const noReviewersAtAll =
         (!pr.requested_teams || pr.requested_teams.length === 0) &&
         (!pr.requested_reviewers || pr.requested_reviewers.length === 0);
 
-      // NEW: Check if this might be an orphaned team review
+      // Check if this might be an orphaned team review
       // If we have a review_requested notification but the user is NOT personally requested,
       // and there's no team currently requested, this is likely a team review where
       // another team member already reviewed
@@ -162,10 +160,19 @@ export class GitHubAPI {
         pr.requested_reviewers.length > 0 &&
         reason === "review_requested";
 
+      // KEY FIX: Determine if this is a team review request
+      // If the notification reason is "review_requested" but the user is NOT in requested_reviewers,
+      // it MUST be a team review (that's the only way they'd get the notification).
+      // This handles cases where GitHub's API might have timing issues and not yet show
+      // the team in requested_teams, or where the team review was already fulfilled.
+      // FIX: Determine if this is a team review request
       const isTeamRequest =
         (hasTeamReviewers && !isPersonallyRequested) ||
-        (noReviewersAtAll && !isPersonallyRequested) ||
-        hasOtherReviewersButNotUser;
+        // FIX 1: Only treat "no reviewers" as team review for actual review_requested notifications
+        (noReviewersAtAll && !isPersonallyRequested && reason === "review_requested") ||
+        hasOtherReviewersButNotUser ||
+        // FIX 2: Catch-all safety net - if you got review_requested but aren't personally requested, it's a team review
+        (reason === "review_requested" && !isPersonallyRequested);
 
       // Enhanced debug logging for team review detection
       const debugMode =

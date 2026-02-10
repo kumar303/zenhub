@@ -17,10 +17,9 @@
 
 ### Testing
 
-- When writing tests for bug fixes, ALWAYS verify the test fails before the fix is applied
-- Either write the test first (before implementing the fix), or comment out the fix and verify the test fails
-- A test that passes both with and without the fix is not testing the right thing
-- This "comment, fail, uncomment, pass" strategy ensures tests are actually validating the fix
+- All new features and bug fixes must be created with TDD (test driven development)
+- When adding a new feature, ALWAYS create a failing test first based on how a user would use the new feature
+- When fixing bugs, ALWAYS create a failing test that reproduces the bug before fixing the bug
 
 ## ⚠️ Post-Change Checklist
 
@@ -142,7 +141,7 @@ const answer = await quick.ai.ask("What is the capital of France?");
 // Chat with system context
 const response = await quick.ai.askWithSystem(
   "You are a helpful assistant",
-  "Explain quantum computing"
+  "Explain quantum computing",
 );
 // Returns: "Quantum computing is..."
 
@@ -156,7 +155,7 @@ const chat = await quick.ai.chat(
     model: "gpt-4",
     temperature: 0.8,
     max_tokens: 500,
-  }
+  },
 );
 // Returns: { choices: [{ message: { content: "Hello! How can I help?" } }] }
 
@@ -290,14 +289,14 @@ const authResult = await quick.auth.requestScopes([
 
 // Simple query
 const results = await quick.dw.querySync(
-  "SELECT * FROM dataset.table LIMIT 10"
+  "SELECT * FROM dataset.table LIMIT 10",
 );
 // Returns: { results: [...], rowCount: 123 }
 
 // Query with parameters (@ prefix for BigQuery named parameters)
 const data = await quick.dw.querySync(
   "SELECT * FROM dataset.users WHERE age > @age",
-  { name: "age", value: 21 }
+  { name: "age", value: 21 },
 );
 
 // Query with options
@@ -338,7 +337,7 @@ await quick.slack.sendAlert("W02AJD7R7LQ", "Database down", "error");
 await quick.slack.sendStatus(
   "W02AJD7R7LQ",
   "online",
-  "All systems operational"
+  "All systems operational",
 );
 
 // Code snippets
@@ -346,7 +345,7 @@ await quick.slack.sendCode(
   "#dev",
   'console.log("Hello");',
   "javascript",
-  "Example"
+  "Example",
 );
 
 // Tables
@@ -357,6 +356,6 @@ await quick.slack.sendTable(
   [
     ["Widget", 100],
     ["Gadget", 200],
-  ]
+  ],
 );
 ```
