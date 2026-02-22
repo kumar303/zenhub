@@ -226,9 +226,14 @@ location.reload();
             })
           );
 
+          // Show non-open entries first (these are the interesting ones),
+          // then show all entries
+          const nonOpen = entries.filter((e) => e.state !== "open");
+
           return {
             count: entries.length,
-            entries: entries.slice(0, 10),
+            nonOpenEntries: nonOpen,
+            allEntries: entries,
           };
         } catch (e) {
           return "invalid";

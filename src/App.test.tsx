@@ -1392,28 +1392,30 @@ describe("<App>", () => {
       expect(screen.queryByText("This will 404")).toBeNull();
     });
 
-    it("should hide notifications when fetching PR state results in an error", async () => {
-      const mergedPR: GitHubNotification = {
-        id: "notif-merged",
+    it("should still show notifications when fetching PR state results in an error", async () => {
+      const errorPR: GitHubNotification = {
+        id: "notif-error-state",
         unread: true,
-        reason: "team_mention",
-        updated_at: "2025-08-21T16:55:33Z",
+        reason: "review_requested",
+        updated_at: new Date(
+          Date.now() - 1 * 24 * 60 * 60 * 1000
+        ).toISOString(),
         last_read_at: undefined,
         subject: {
-          title: "remove mobile beta flag",
-          url: "https://api.github.com/repos/shop/world/pulls/149303",
+          title: "Important review request with API error",
+          url: "https://api.github.com/repos/shop/world/pulls/369291",
           type: "PullRequest",
           latest_comment_url: undefined,
         },
         repository: mockRepository,
-        url: "https://api.github.com/notifications/notif-merged",
+        url: "https://api.github.com/notifications/notif-error-state",
         subscription_url:
-          "https://api.github.com/notifications/threads/notif-merged",
+          "https://api.github.com/notifications/threads/notif-error-state",
       };
 
       setupMockApi({
-        notifications: [mergedPR],
-        errorUrls: ["/pulls/149303"],
+        notifications: [errorPR],
+        errorUrls: ["/pulls/369291"],
       });
 
       render(<App />);
@@ -1426,16 +1428,26 @@ describe("<App>", () => {
         expect(screen.queryByText("Refreshing...")).toBeNull();
       });
 
-      // The notification should NOT be visible since we couldn't fetch its state
-      // Instead, we should see "No notifications!"
+      // The notification SHOULD appear in a section even though state fetch
+      // failed. Better to show a potentially closed PR than to silently hide
+      // a review request the user needs to act on.
+      const reviewSection = await screen.findByText(/REVIEW REQUESTS/);
+      expect(reviewSection).toBeInTheDocument();
+
+      // Expand the section to verify the PR title is present
+      const user = userEvent.setup();
+      await user.click(reviewSection);
+
       await waitFor(() => {
-        expect(screen.queryByText(/No notifications!/i)).not.toBeNull();
+        expect(
+          screen.getByText("Important review request with API error")
+        ).toBeInTheDocument();
       });
     });
 
-    it("should hide notifications when fetching PR state is still pending", async () => {
-      const pendingPR: GitHubNotification = {
-        id: "notif-pending",
+    it("should still show notifications when PR state API returns no state field", async () => {
+      const noStatePR: GitHubNotification = {
+        id: "notif-no-state",
         unread: true,
         reason: "review_requested",
         updated_at: new Date(
@@ -1449,30 +1461,42 @@ describe("<App>", () => {
           latest_comment_url: undefined,
         },
         repository: mockRepository,
-        url: "https://api.github.com/notifications/notif-pending",
+        url: "https://api.github.com/notifications/notif-no-state",
         subscription_url:
-          "https://api.github.com/notifications/threads/notif-pending",
+          "https://api.github.com/notifications/threads/notif-no-state",
       };
 
-      // Don't mock the PR details - this simulates the state not being fetched yet
+      // Mock PR details without a state field
       setupMockApi({
-        notifications: [pendingPR],
-        pullRequests: {}, // Explicitly no PR state provided
+        notifications: [noStatePR],
+        pullRequests: {
+          "/pulls/150000": {
+            draft: false,
+            requested_reviewers: [{ login: "kumar303" }],
+            requested_teams: [],
+          },
+        },
       });
 
       render(<App />);
 
       await waitFor(() => {
-        expect(screen.queryByText("LOADING")).toBeNull();
-      });
-
-      await waitFor(() => {
         expect(screen.queryByText("Refreshing...")).toBeNull();
       });
 
-      // The notification should NOT be visible since state hasn't been fetched yet
+      // The notification SHOULD appear in a section even if the API didn't
+      // return a state field — it should not be silently hidden
+      const reviewSection = await screen.findByText(/REVIEW REQUESTS/);
+      expect(reviewSection).toBeInTheDocument();
+
+      // Expand the section to verify the PR title is present
+      const user = userEvent.setup();
+      await user.click(reviewSection);
+
       await waitFor(() => {
-        expect(screen.queryByText(/No notifications!/i)).not.toBeNull();
+        expect(
+          screen.getByText("New feature implementation")
+        ).toBeInTheDocument();
       });
     });
   });

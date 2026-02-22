@@ -134,6 +134,9 @@ export function useNotifications(token: string | null) {
           .then((details) => {
             if (details && details.state) {
               stateCache.set(url, details.state);
+            } else if (details) {
+              // API returned data but without a state field — assume open
+              stateCache.set(url, "open");
             }
           })
           .catch((err) => {
