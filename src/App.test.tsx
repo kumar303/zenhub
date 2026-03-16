@@ -2863,4 +2863,102 @@ describe("<App>", () => {
       });
     });
   });
+
+  describe("cache invalidation", () => {
+    it("should invalidate team cache when notification updated_at is newer than cache timestamp", async () => {
+      // Scenario: PR was initially a team review request, cached as such.
+      // Then the user was added as a direct reviewer, which updates the notification's updated_at.
+      // The cache entry is stale and should be invalidated so the PR shows in Review Requests.
+
+      const cacheTimestamp = Date.now() - 10 * 60 * 1000; // 10 minutes ago
+      const notificationUpdatedAt = new Date(
+        Date.now() - 2 * 60 * 1000
+      ).toISOString(); // 2 minutes ago (newer than cache)
+
+      // Pre-populate the team cache with stale "team review" data
+      // Simulate what happens when a team review was cached before the user was added directly
+      const cacheKey = "github_team_cache_v5";
+      mockLocalStorage.data[cacheKey] = JSON.stringify({
+        data: {
+          "notif-stale-team": {
+            isTeamReviewRequest: true,
+            teamSlug: "crafters",
+            teamName: "Crafters",
+            isDraft: false,
+            timestamp: cacheTimestamp,
+          },
+        },
+        timestamp: Date.now(),
+      });
+
+      setupMockApi({
+        teams: [
+          {
+            id: 233,
+            node_id: "node_233",
+            slug: "crafters",
+            name: "Crafters",
+            organization: {
+              login: "shopify",
+              id: 1,
+              avatar_url: "https://avatars.githubusercontent.com/u/1",
+            },
+          },
+        ],
+        notifications: [
+          {
+            id: "notif-stale-team",
+            unread: true,
+            reason: "review_requested",
+            updated_at: notificationUpdatedAt,
+            subject: {
+              title: "Reduce sandbox worker polyfills",
+              url: "https://api.github.com/repos/test/test-repo/pulls/500",
+              type: "PullRequest",
+            },
+            repository: mockRepository,
+            url: "https://api.github.com/notifications/threads/notif-stale-team",
+            subscription_url:
+              "https://api.github.com/notifications/threads/notif-stale-team/subscription",
+          },
+        ],
+        pullRequests: {
+          "/pulls/500": {
+            // Now the user IS directly requested (they were added after the team request)
+            requested_reviewers: [mockUser],
+            requested_teams: [{ slug: "crafters", name: "Crafters", id: 233 }],
+          },
+        },
+      });
+
+      render(<App />);
+
+      // The PR should appear in Review Requests, NOT in the Crafters team section
+      await waitFor(() => {
+        const reviewRequestsElements = screen.getAllByText(/REVIEW REQUESTS/);
+        const reviewRequestsSection = reviewRequestsElements.find(
+          (el) =>
+            el.textContent?.trim().startsWith("REVIEW REQUESTS") &&
+            el.classList.contains("vhs-text")
+        );
+        expect(reviewRequestsSection).toBeDefined();
+        expect(reviewRequestsSection?.textContent).toContain("[1]");
+      });
+
+      const user = userEvent.setup();
+      const reviewRequestsHeader = await screen.findByRole("button", {
+        name: "Expand section",
+      });
+      await user.click(reviewRequestsHeader);
+
+      await waitFor(() => {
+        expect(
+          screen.getByText("Reduce sandbox worker polyfills")
+        ).toBeDefined();
+      });
+
+      // It should NOT appear in the Crafters team section
+      expect(screen.queryByText(/^CRAFTERS/)).toBeNull();
+    });
+  });
 });

@@ -255,7 +255,8 @@ export function useNotifications(token: string | null) {
       for (const group of Object.values(groups)) {
         if (group.hasReviewRequest && group.subject.type === "PullRequest") {
           // Check cache first
-          const cached = teamCache.get(group.notifications[0].id);
+          const notification = group.notifications[0];
+          const cached = teamCache.get(notification.id);
           const debugMode =
             localStorage.getItem("debug_team_reviews") === "true";
           if (debugMode) {
@@ -265,7 +266,26 @@ export function useNotifications(token: string | null) {
               }`
             );
           }
-          if (cached && cached.isDraft !== undefined) {
+
+          // Invalidate cache if the notification was updated after the cache entry was written.
+          // This handles the case where a user is added as a direct reviewer after a team
+          // review request was already cached — the notification's updated_at changes but the
+          // cache still says "team review".
+          let cacheIsStale = false;
+          if (cached) {
+            const cacheTimestamp = teamCache.getTimestamp(notification.id);
+            const notificationUpdatedAt = new Date(notification.updated_at).getTime();
+            if (cacheTimestamp && notificationUpdatedAt > cacheTimestamp) {
+              cacheIsStale = true;
+              if (debugMode) {
+                console.log(
+                  `  Cache is stale for ${group.subject.title}: notification updated at ${notification.updated_at} (${notificationUpdatedAt}) > cache timestamp ${cacheTimestamp}`
+                );
+              }
+            }
+          }
+
+          if (cached && cached.isDraft !== undefined && !cacheIsStale) {
             if (debugMode) {
               console.log(`  Using cached data:`, cached);
             }
@@ -288,11 +308,11 @@ export function useNotifications(token: string | null) {
           } else {
             // Need to check via API for team status AND draft status
             if (debugMode) {
-              console.log(`  Will check via API: ${group.subject.title}`);
+              console.log(`  Will check via API: ${group.subject.title}${cacheIsStale ? " (cache invalidated)" : ""}`);
             }
             reviewRequestsToCheck.push({
               group,
-              notification: group.notifications[0],
+              notification,
             });
           }
         }

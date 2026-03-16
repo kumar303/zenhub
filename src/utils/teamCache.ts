@@ -28,6 +28,10 @@ class TeamCache {
     return this.cache.getItem(notificationId);
   }
 
+  getTimestamp(notificationId: string): number | null {
+    return this.cache.getItemTimestamp(notificationId);
+  }
+
   set(
     notificationId: string,
     isTeamReviewRequest: boolean,

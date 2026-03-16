@@ -86,6 +86,15 @@ export class ItemCache<T> extends Cache<
     return null;
   }
 
+  getItemTimestamp(key: string): number | null {
+    const allData = this.get() || {};
+    const item = allData[key];
+    if (item && Date.now() - item.timestamp < this.cacheDuration) {
+      return item.timestamp;
+    }
+    return null;
+  }
+
   setItem(key: string, value: T): void {
     const allData = this.get() || {};
     allData[key] = {
